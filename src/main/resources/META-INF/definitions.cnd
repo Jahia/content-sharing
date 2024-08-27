@@ -1,2 +1,9 @@
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
+<semix = 'http://modules.se.jahia.org/se/mix/1.0'>
+<se = 'http://modules.se.jahia.org/se/1.0'>
+
+[semix:sharedUrl] mixin
+ extends = jnt:content
+ itemtype = content
+ - se:sharedUrl (string) indexed=no

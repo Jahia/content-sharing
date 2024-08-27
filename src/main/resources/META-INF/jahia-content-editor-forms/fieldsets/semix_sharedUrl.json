@@ -1,0 +1,9 @@
+{
+  "name": "semix:sharedUrl",
+  "fields": [
+    {
+      "name": "se:sharedUrl",
+      "selectorType": "SharedURLGenerator"
+    }
+  ]
+}

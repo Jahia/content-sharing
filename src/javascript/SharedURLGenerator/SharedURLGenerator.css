@@ -1,0 +1,7 @@
+.syncButton {
+    margin-top: var(--spacing-medium);
+}
+.fieldSetDescription {
+    margin-top: var(--spacing-nano);
+    color: var(--color-dark60);
+}

@@ -1,13 +1,7 @@
 {
   "label": {
-    "settings": {
-      "title": "Content Sharing setting"
-    },
-    "action": {
-      "title": "Content Sharing - How to extend the ui ?"
-    },
-    "appsAccordion": {
-      "title": "Content Sharing"
+    "btn":{
+      "generateKey": "Create new key"
     }
   }
 }

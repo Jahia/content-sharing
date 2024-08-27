@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<content xmlns:j="http://www.jahia.org/jahia/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0">
+    <modules jcr:primaryType="jnt:modules">
+        <industrial j:dependencies="animate bootstrap4-components bootstrap4-core codemirror-editor default jquery popperjs se-utils"
+                    j:installedModules="industrial"
+                    j:modulePriority="0"
+                    j:moduleType="templatesSet"
+                    j:title="industrial"
+                    jcr:mixinTypes="jmix:hasExternalProviderExtension"
+                    jcr:primaryType="jnt:module">
+            <templates jcr:primaryType="jnt:templatesFolder">
+                <base j:view="industrial"
+                      jcr:mixinTypes="jmix:theme"
+                      jcr:primaryType="jnt:template">
+                    <footercontent jcr:primaryType="jnt:contentList">
+                        <footer-static-area j:limitedAbsoluteAreaEdit="false" jcr:primaryType="jnt:absoluteArea"/>
+                    </footercontent>
+                    <headercontent jcr:primaryType="jnt:contentList">
+                        <main-navigation jcr:mixinTypes="bootstrap4mix:createSection"
+                                         jcr:primaryType="bootstrap4nt:grid"
+                                         sectionElement="header"
+                                         sectionRole="banner">
+                            <main-navigation jcr:primaryType="jnt:contentList">
+                                <header-static-area j:limitedAbsoluteAreaEdit="false" jcr:primaryType="jnt:absoluteArea"/>
+                            </main-navigation>
+                        </main-navigation>
+                    </headercontent>
+                    <industrial-shared-content-template j:applyOn="jmix:mainResource"
+                                                 j:defaultTemplate="false"
+                                                 j:hiddenTemplate="true"
+                                                 jcr:primaryType="jnt:contentTemplate">
+                        <j:translation_en jcr:language="en"
+                                          jcr:mixinTypes="mix:title"
+                                          jcr:primaryType="jnt:translation"
+                                          jcr:title="industriall shared content template"/>
+                        <j:translation_de jcr:language="de"
+                                          jcr:mixinTypes="mix:title"
+                                          jcr:primaryType="jnt:translation"
+                                          jcr:title="industriall shared content template"/>
+                        <j:translation_pt jcr:language="pt"
+                                          jcr:mixinTypes="mix:title"
+                                          jcr:primaryType="jnt:translation"
+                                          jcr:title="industriall shared content template"/>
+                        <j:translation_it jcr:language="it"
+                                          jcr:mixinTypes="mix:title"
+                                          jcr:primaryType="jnt:translation"
+                                          jcr:title="industriall shared content template"/>
+                        <j:translation_fr jcr:language="fr"
+                                          jcr:mixinTypes="mix:title"
+                                          jcr:primaryType="jnt:translation"
+                                          jcr:title="industriall shared content template"/>
+                        <j:translation_es jcr:language="es"
+                                          jcr:mixinTypes="mix:title"
+                                          jcr:primaryType="jnt:translation"
+                                          jcr:title="industriall shared content template"/>
+                        <j:translation_de_DE jcr:language="de_DE"
+                                             jcr:mixinTypes="mix:title"
+                                             jcr:primaryType="jnt:translation"
+                                             jcr:title="industriall shared content template"/>
+                        <pagecontent jcr:mixinTypes="jmix:systemNameReadonly"
+                                     jcr:primaryType="jnt:contentList">
+                            <main-resource-display j:mainResourceView="hidden.sharedResource" jcr:primaryType="jnt:mainResourceDisplay"/>
+                        </pagecontent>
+                    </industrial-shared-content-template>
+                </base>
+            </templates>
+        </industrial>
+    </modules>
+</content>
