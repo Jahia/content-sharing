@@ -1,0 +1,11 @@
+{
+  "label": {
+    "btn": {
+      "generateKey": "Neue URL erstellen",
+      "copyUrl": "Freigabe-URL kopieren"
+    },
+    "url": {
+      "generateKey": "Klicken Sie auf die Schaltfläche 'NEUE URL ERSTELLEN', um die URL zu generieren"
+    }
+  }
+}

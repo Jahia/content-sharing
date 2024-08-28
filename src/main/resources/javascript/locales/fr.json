@@ -1,0 +1,11 @@
+{
+  "label": {
+    "btn": {
+      "generateKey": "Créer une nouvelle URL",
+      "copyUrl": "Copier l'URL de partage"
+    },
+    "url": {
+      "generateKey": "Cliquez sur le bouton 'CRÉER UNE NOUVELLE URL' pour générer l'URL"
+    }
+  }
+}

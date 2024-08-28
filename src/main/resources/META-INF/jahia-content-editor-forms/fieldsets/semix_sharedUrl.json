@@ -3,7 +3,11 @@
   "fields": [
     {
       "name": "se:sharedUrl",
-      "selectorType": "SharedURLGenerator"
+      "selectorType": "SharedURLGenerator",
+      "selectorOptionsMap": {
+        "length": 16,
+        "format": "aA#!"
+      }
     }
   ]
 }

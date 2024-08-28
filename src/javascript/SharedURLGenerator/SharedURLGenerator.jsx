@@ -1,27 +1,32 @@
 import React from 'react';
 import * as PropTypes from 'prop-types';
 import {useTranslation} from 'react-i18next';
-import styles from './SharedURLGenerator.css';
-
-import {IconButton, Input/* , Toggle */} from '@jahia/design-system-kit';
-
-import {Grid/* , FormControlLabel, withStyles */} from '@material-ui/core';
-import {Button, Reload, Typography} from '@jahia/moonstone';
-// Const styles = () => ({
-//     switchLabel: {
-//         '& >span:last-child': {
-//             color: 'black'
-//             // FontSize: '1rem'
-//         }
-//     },
-//     container: {
-//         padding: '.5rem',
-//         boxShadow: '0px 2px 10px -5px #000000, 2px 5px 15px 5px rgba(0,0,0,0);'
-//     },
-//     toggle: {
-//         margin: 0
-//     }
-// });
+import {withStyles} from '@material-ui/core';
+import {Button, Reload, Copy, Typography} from '@jahia/moonstone';
+const styles = theme => ({
+    syncButton: {
+        marginTop: 'var(--spacing-medium)'
+    },
+    copyButton: {
+        marginLeft: 'var(--spacing-small)'
+    },
+    fieldSetDescription: {
+        overflowWrap: 'anywhere',
+        marginTop: 'var(--spacing-nano)',
+        color: 'var(--color-dark60)',
+        backgroundColor: theme.palette.ui.epsilon,
+        width: '100%',
+        /* Height: theme.spacing.unit * 9, */
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        border: '1px rgba(218, 218, 218, 0.4) solid',
+        // Border: '1px var(--color-gray40) solid',
+        // boxShadow: '1px 5px 6px rgba(64, 77, 86, 0.1)',
+        borderRadius: '2px',
+        padding: '6px'
+    }
+});
 
 const getRandomString = ({length, format}) => {
     let mask = '';
@@ -38,7 +43,7 @@ const getRandomString = ({length, format}) => {
     }
 
     if (format.indexOf('!') > -1) {
-        mask += '~`!@#$%^&*()_+-={}[]:";\'<>?,./|\\';
+        mask += '~!@#$%^()_+-{};<>?,.';
     }
 
     let result = '';
@@ -49,46 +54,47 @@ const getRandomString = ({length, format}) => {
     return result;
 };
 
-const getURL = ({key, nodeTypeName, lang}) => {
+const getURL = ({key, nodeTypeName, lang, origin}) => {
     if (!key) {
         return;
     }
 
-    const url = new URL('/modules/share', window.location.origin);
+    const url = new URL('/modules/share', origin);
     url.searchParams.append('c', key);
     url.searchParams.append('t', nodeTypeName);
     url.searchParams.append('l', lang);
-    return encodeURIComponent(url.toString());
+    // Return encodeURIComponent(url.toString());
+    return url.toString();
 };
 
-export const SharedURLGenerator = ({field, value, onChange, editorContext}) => {
-    const length = field.selectorOptions.find(option => option.name === 'length') || 24;
-    const format = field.selectorOptions.find(option => option.name === 'length') || 'aA#!';
+const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext}) => {
+    const length = field.selectorOptions.find(option => option.name === 'length')?.value || 24;
+    const format = field.selectorOptions.find(option => option.name === 'format')?.value || 'aA#!';
+    const origin = field.selectorOptions.find(option => option.name === 'origin')?.value || window.location.origin;
     const {nodeTypeName, lang} = editorContext;
     const {t} = useTranslation('content-sharing');
 
     if (!value) {
-        const newValue = getRandomString({length, format});
-        onChange(newValue);
+        onChange(getRandomString({length, format}));
     }
 
     const url = getURL({
         key: value,
+        origin,
         nodeTypeName,
         lang
     });
     const handleNewKey = () => onChange(getRandomString({length, format}));
+    const handleCopy = () => navigator.clipboard.writeText(url);
 
     return (
-        <div className="flexRow_nowrap">
-            <Typography component="label"
-                        className={styles.fieldSetDescription}
-                        variant="caption"
-                        weight="bold"
+        <>
+            <Typography component="div"
+                        className={classes.fieldSetDescription}
             >
                 {url || t('label.url.generateKey')}
             </Typography>
-            <Button className={styles.syncButton}
+            <Button className={classes.syncButton}
                     data-sel-role="syncSystemName"
                     variant="outlined"
                     size="big"
@@ -97,16 +103,26 @@ export const SharedURLGenerator = ({field, value, onChange, editorContext}) => {
                     icon={<Reload/>}
                     onClick={handleNewKey}
             />
-        </div>
+            <Button className={classes.copyButton}
+                    data-sel-role="syncSystemName"
+                    variant="outlined"
+                    size="big"
+                    color="accent"
+                    label={t('label.btn.copyUrl')}
+                    icon={<Copy/>}
+                    onClick={handleCopy}
+            />
+        </>
     );
 };
 
-SharedURLGenerator.propTypes = {
+SharedURLGeneratorCMP.propTypes = {
+    classes: PropTypes.object.isRequired,
     field: PropTypes.object,
     value: PropTypes.string,
     onChange: PropTypes.func.isRequired,
     editorContext: PropTypes.object.isRequired
 };
 
-// Export const QnAJson = withStyles(styles)(SharedURLGenerator);
+export const SharedURLGenerator = withStyles(styles)(SharedURLGeneratorCMP);
 // SharedURLGenerator.displayName = 'QnAJsonCmp';

@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 public class ContentSharingServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContentSharingServlet.class);
 
+    private static final String KEY_PROPS = "se:sharedUrl";
     private JCRTemplate jcrTemplate;
     private RenderService renderService;
 
@@ -68,7 +69,7 @@ public class ContentSharingServlet extends HttpServlet {
                     public String doInJCR(JCRSessionWrapper session) throws RepositoryException {
                         JCRNodeIteratorWrapper iteratorWrapper =  session.getWorkspace()
                                 .getQueryManager()
-                                .createQuery("SELECT * FROM ["+contentType+"] AS node WHERE node.[jcr:title] = '"+contentKey+"'", Query.JCR_SQL2)
+                                .createQuery("SELECT * FROM ["+contentType+"] AS node WHERE node.["+KEY_PROPS+"] = '"+contentKey+"'", Query.JCR_SQL2)
                                 .execute()
                                 .getNodes();
                         if(iteratorWrapper.hasNext()){
@@ -93,7 +94,7 @@ public class ContentSharingServlet extends HttpServlet {
                             }
 
                         }
-                        return null;
+                        return "<h1>Oups nothing to display</h1>";
                     }
                 })
             );

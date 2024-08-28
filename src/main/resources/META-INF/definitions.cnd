@@ -6,4 +6,4 @@
 [semix:sharedUrl] mixin
  extends = jnt:content
  itemtype = content
- - se:sharedUrl (string) indexed=no
+ - se:sharedUrl (string) internationalized nofulltext
