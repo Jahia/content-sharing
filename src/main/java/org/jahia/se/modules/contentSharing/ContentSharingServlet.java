@@ -1,6 +1,7 @@
 package org.jahia.se.modules.contentSharing;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.util.Text;
 import org.jahia.bin.Render;
 import org.jahia.osgi.BundleUtils;
 import org.jahia.services.content.*;
@@ -9,7 +10,10 @@ import org.jahia.services.render.*;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.jahia.api.Constants;
 
+import javax.jcr.Binary;
+import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
 import javax.jcr.query.Query;
 import javax.servlet.ServletException;
@@ -17,7 +21,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Locale;
 import java.util.Map;
 import org.jahia.api.Constants;
@@ -74,24 +81,14 @@ public class ContentSharingServlet extends HttpServlet {
                                 .getNodes();
                         if(iteratorWrapper.hasNext()){
                             JCRNodeWrapper node = (JCRNodeWrapper) iteratorWrapper.next();
-    //                        session.getNodeByIdentifier(node.getIdentifier())
 
-                            Resource r = new Resource(node, "html", "default", "page");
-                            RenderContext localRenderContext = new RenderContext(unwrapRequest(request), response, JCRSessionFactory.getInstance().getCurrentUser());                            localRenderContext.setMainResource(r);
-                            localRenderContext.setEditMode(false);
-                            localRenderContext.setWorkspace(Constants.LIVE_WORKSPACE);
-                            localRenderContext.setServletPath(Render.getRenderServletPath());
-//                            localRenderContext.setServletPath("/cms/render");
-//                            localRenderContext.setWorkspace(node.getSession().getWorkspace().getName());
-                            JCRSiteNode site = node.getResolveSite();
-                            localRenderContext.setSite(site);
-                            localRenderContext.setSiteInfo(new SiteInfo(node.getResolveSite()));
-                            localRenderContext.setURLGenerator(new URLGenerator(localRenderContext, r));
-                            try {
-                                return renderService.render(r, localRenderContext);
-                            } catch (RenderException e) {
-                                throw new RuntimeException(e);
+    //                        session.getNodeByIdentifier(node.getIdentifier())
+                            if(node.isNodeType(Constants.JAHIANT_FILE)){
+                                return renderFile(node,request,response);
+                            }else{
+                                return renderContent(node,request,response);
                             }
+
 
                         }
                         return "<h1>Oups nothing to display</h1>";
@@ -112,6 +109,68 @@ public class ContentSharingServlet extends HttpServlet {
         // Handle POST requests here
     }
 
+    private String renderContent (JCRNodeWrapper node,HttpServletRequest request, HttpServletResponse response) throws RepositoryException {
+        Resource r = new Resource(node, "html", "default", "page");
+        RenderContext localRenderContext = new RenderContext(unwrapRequest(request), response, JCRSessionFactory.getInstance().getCurrentUser());                            localRenderContext.setMainResource(r);
+        localRenderContext.setEditMode(false);
+        localRenderContext.setWorkspace(Constants.LIVE_WORKSPACE);
+        localRenderContext.setServletPath(Render.getRenderServletPath());
+//                            localRenderContext.setServletPath("/cms/render");
+//                            localRenderContext.setWorkspace(node.getSession().getWorkspace().getName());
+        JCRSiteNode site = node.getResolveSite();
+        localRenderContext.setSite(site);
+        localRenderContext.setSiteInfo(new SiteInfo(node.getResolveSite()));
+        localRenderContext.setURLGenerator(new URLGenerator(localRenderContext, r));
+        try {
+            return renderService.render(r, localRenderContext);
+        } catch (RenderException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String renderFile (JCRNodeWrapper node,HttpServletRequest request, HttpServletResponse response) throws RepositoryException {
+        Binary binary = null;
+        try {
+            JCRNodeWrapper content = getContentNode(node);
+            binary = content.getProperty(Constants.JCR_DATA).getBinary();
+            String mimetype = content.getProperty(Constants.JCR_MIMETYPE).getString();
+            String fileName = node.getProperty("j:nodename").getString();
+
+            response.setContentType(mimetype);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+            response.setContentLength((int) binary.getSize());
+            try (InputStream is =  binary.getStream();
+                 OutputStream os = response.getOutputStream()) {
+
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+            }
+            return null;
+
+        } catch (PathNotFoundException | IOException e) {
+            LOGGER.warn("Unable to get " + Constants.JCR_DATA + " property for node {}", node.getPath());
+            return "<h1>No file found</h1>";
+        }
+    }
+
+    private JCRNodeWrapper getContentNode(JCRNodeWrapper n)
+            throws RepositoryException {
+
+        JCRNodeWrapper content;
+        try {
+            content = n.getNode(Constants.JCR_CONTENT);
+        } catch (PathNotFoundException e) {
+            LOGGER.warn("Cannot find " + Constants.JCR_CONTENT + " sub-node in the {} node.",
+                    n.getPath());
+            content = null;
+        }
+
+        return content;
+    }
     //Taken from graphql-dxm-provider/src/main/java/org/jahia/modules/graphql/provider/dxm/util/ServletUtil.java
 
     /**
