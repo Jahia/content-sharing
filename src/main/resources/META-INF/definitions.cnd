@@ -7,3 +7,4 @@
  extends = jnt:content, jnt:file
  itemtype = content
  - se:sharedUrl (string) internationalized nofulltext
+ - se:sharedUrlExpiry (date) internationalized nofulltext

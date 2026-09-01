@@ -1,8 +1,9 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import * as PropTypes from 'prop-types';
 import {useTranslation} from 'react-i18next';
 import {withStyles} from '@material-ui/core';
 import {Button, Reload, Copy, Typography} from '@jahia/moonstone';
+
 const styles = theme => ({
     syncButton: {
         marginTop: 'var(--spacing-medium)'
@@ -16,39 +17,65 @@ const styles = theme => ({
         color: 'var(--color-dark60)',
         backgroundColor: theme.palette.ui.epsilon,
         width: '100%',
-        /* Height: theme.spacing.unit * 9, */
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         border: '1px rgba(218, 218, 218, 0.4) solid',
-        // Border: '1px var(--color-gray40) solid',
-        // boxShadow: '1px 5px 6px rgba(64, 77, 86, 0.1)',
         borderRadius: '2px',
         padding: '6px'
     }
 });
 
-const getRandomString = ({length, format}) => {
+const LOWER = 'abcdefghijklmnopqrstuvwxyz';
+const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const DIGITS = '0123456789';
+
+// Only characters that survive a URL query string unchanged are eligible; the legacy '!' class
+// emitted '#', '?' and '%', which the servlet no longer accepts. The 24-character default over
+// the 62-symbol alphabet is about 143 bits.
+const SAFE_PUNCTUATION = '-._~';
+
+const buildMask = format => {
     let mask = '';
-    if (format.indexOf('a') > -1) {
-        mask += 'abcdefghijklmnopqrstuvwxyz';
+    if (format.includes('a')) {
+        mask += LOWER;
     }
 
-    if (format.indexOf('A') > -1) {
-        mask += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (format.includes('A')) {
+        mask += UPPER;
     }
 
-    if (format.indexOf('#') > -1) {
-        mask += '0123456789';
+    if (format.includes('#')) {
+        mask += DIGITS;
     }
 
-    if (format.indexOf('!') > -1) {
-        mask += '~!@#$%^()_+-{};<>?,.';
+    if (format.includes('!')) {
+        mask += SAFE_PUNCTUATION;
     }
 
+    return mask || LOWER + UPPER + DIGITS;
+};
+
+/**
+ * Draws `length` characters from `mask` using the platform CSPRNG.
+ *
+ * Rejection sampling, not modulo: `crypto.getRandomValues` yields bytes, and folding 256 values
+ * onto a mask whose size does not divide 256 would make the first `256 % mask.length` symbols
+ * more likely than the rest. Values at or above the largest whole multiple are drawn again.
+ */
+const getRandomString = ({length, format}) => {
+    const mask = buildMask(format);
+    const limit = Math.floor(256 / mask.length) * mask.length;
     let result = '';
-    for (let i = length; i > 0; --i) {
-        result += mask[Math.floor(Math.random() * mask.length)];
+
+    while (result.length < length) {
+        const bytes = new Uint8Array(length - result.length);
+        window.crypto.getRandomValues(bytes);
+        for (const byte of bytes) {
+            if (byte < limit) {
+                result += mask[byte % mask.length];
+            }
+        }
     }
 
     return result;
@@ -63,20 +90,23 @@ const getURL = ({key, nodeTypeName, lang, origin}) => {
     url.searchParams.append('c', key);
     url.searchParams.append('t', nodeTypeName);
     url.searchParams.append('l', lang);
-    // Return encodeURIComponent(url.toString());
     return url.toString();
 };
 
 const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext}) => {
     const length = field.selectorOptions.find(option => option.name === 'length')?.value || 24;
-    const format = field.selectorOptions.find(option => option.name === 'format')?.value || 'aA#!';
+    const format = field.selectorOptions.find(option => option.name === 'format')?.value || 'aA#';
     const origin = field.selectorOptions.find(option => option.name === 'origin')?.value || window.location.origin;
     const {nodeTypeName, lang} = editorContext;
     const {t} = useTranslation('content-sharing');
 
-    if (!value) {
-        onChange(getRandomString({length, format}));
-    }
+    // Seeding the field is a state mutation, so it belongs in an effect. From the render body it
+    // fired on every re-render and, under StrictMode, twice per mount.
+    useEffect(() => {
+        if (!value) {
+            onChange(getRandomString({length, format}));
+        }
+    }, [value, length, format, onChange]);
 
     const url = getURL({
         key: value,
@@ -95,7 +125,7 @@ const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext})
                 {url || t('label.url.generateKey')}
             </Typography>
             <Button className={classes.syncButton}
-                    data-sel-role="syncSystemName"
+                    data-sel-role="generateSharedUrl"
                     variant="outlined"
                     size="big"
                     color="accent"
@@ -104,11 +134,12 @@ const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext})
                     onClick={handleNewKey}
             />
             <Button className={classes.copyButton}
-                    data-sel-role="syncSystemName"
+                    data-sel-role="copySharedUrl"
                     variant="outlined"
                     size="big"
                     color="accent"
                     label={t('label.btn.copyUrl')}
+                    disabled={!url}
                     icon={<Copy/>}
                     onClick={handleCopy}
             />
@@ -125,4 +156,4 @@ SharedURLGeneratorCMP.propTypes = {
 };
 
 export const SharedURLGenerator = withStyles(styles)(SharedURLGeneratorCMP);
-// SharedURLGenerator.displayName = 'QnAJsonCmp';
+SharedURLGenerator.displayName = 'SharedURLGenerator';

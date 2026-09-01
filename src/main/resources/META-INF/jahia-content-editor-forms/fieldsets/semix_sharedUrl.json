@@ -5,9 +5,12 @@
       "name": "se:sharedUrl",
       "selectorType": "SharedURLGenerator",
       "selectorOptionsMap": {
-        "length": 16,
-        "format": "aA#!"
+        "length": 24,
+        "format": "aA#"
       }
+    },
+    {
+      "name": "se:sharedUrlExpiry"
     }
   ]
 }
