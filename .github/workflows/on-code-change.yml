@@ -1,0 +1,68 @@
+# Runs on every pull request. This repository had no CI at all, so the goal here is a floor: the
+# module must compile, the front-end must lint, and the static analysers must stay clean. When the
+# repository is onboarded to the organisation's shared pipeline, replace the `build` job with
+# `jahia/jahia-modules-action/build@v2` and add `update-signature` + `sonar-analysis`.
+name: On Code Change (PR)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  build:
+    name: Build module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # The 8.2 parent POM compiles with --release 11; 17 is the highest JDK Jahia modules target.
+          java-version: '17'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build
+        run: mvn --batch-mode --no-transfer-progress install
+
+  javascript:
+    name: Lint and audit the front-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint
+      - name: Audit dependencies
+        run: yarn audit --level high --groups dependencies
+
+  sast:
+    name: Static analysis (Semgrep)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config p/java --config p/javascript --config p/owasp-top-ten
+               --error --metrics=off src
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

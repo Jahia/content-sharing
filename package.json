@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "scripts": {
         "build": "yarn lint:fix && yarn webpack",
+        "lint": "eslint --ext js,jsx,json .",
         "webpack": "node --max_old_space_size=2048 ./node_modules/webpack/bin/webpack.js",
         "build:analyze": "yarn build --analyze",
         "build:production": "yarn build --mode=production",
