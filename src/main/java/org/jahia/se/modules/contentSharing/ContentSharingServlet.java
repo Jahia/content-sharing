@@ -83,13 +83,13 @@ public class ContentSharingServlet extends HttpServlet {
     private static final Logger LOGGER = LoggerFactory.getLogger(ContentSharingServlet.class);
 
     /** Property holding the secret, contributed through the {@code SharedURLGenerator} selector. */
-    private static final String KEY_PROPS = "se:sharedUrl";
+    private static final String KEY_PROPS = "cshare:sharedUrl";
 
     /** Optional expiry companion of {@link #KEY_PROPS}; absent means the link never expires. */
-    private static final String EXPIRY_PROPS = "se:sharedUrlExpiry";
+    private static final String EXPIRY_PROPS = "cshare:sharedUrlExpiry";
 
     /** Only a type carrying this mixin may be addressed, whatever {@code t} claims. */
-    private static final String SHARED_MIXIN = "semix:sharedUrl";
+    private static final String SHARED_MIXIN = "cshmix:sharedUrl";
 
     /**
      * Accepted shape of a sharing key: the URL-safe alphabet the generator emits. A key that

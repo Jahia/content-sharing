@@ -1,8 +1,8 @@
 {
-  "name": "semix:sharedUrl",
+  "name": "cshmix:sharedUrl",
   "fields": [
     {
-      "name": "se:sharedUrl",
+      "name": "cshare:sharedUrl",
       "selectorType": "SharedURLGenerator",
       "selectorOptionsMap": {
         "length": 24,
@@ -10,7 +10,7 @@
       }
     },
     {
-      "name": "se:sharedUrlExpiry"
+      "name": "cshare:sharedUrlExpiry"
     }
   ]
 }

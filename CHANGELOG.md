@@ -6,6 +6,17 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Breaking
+
+- The module's content model moves to its own namespace. The mixin becomes `cshmix:sharedUrl` and
+  its properties `cshare:sharedUrl` and `cshare:sharedUrlExpiry`. The names it used before were
+  built on a two-character prefix that other modules of the same family also claim; where two
+  modules claim it, the one installed second brings neither its content model nor its editor field,
+  reports no error, and leaves the next module installed on that server without its own content
+  model either. On a server where this module never worked there is nothing to migrate, and
+  [`UPGRADE.md`](UPGRADE.md) tells you how to check. Where it did work, the scripts under
+  `migration/` carry existing links over, and `UPGRADE.md` gives the order to run them in.
+
 ### Added
 
 - A shared link can carry an **expiry date**. The link stops working after that date; leaving the
