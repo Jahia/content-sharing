@@ -27,7 +27,16 @@ leave it empty for a link that never expires.
 | `SharedURLGenerator.jsx` | Content Editor selector: generates the key with the browser CSPRNG and builds the URL. |
 | `ContentSharingServlet` | The `/share` alias. Validates the request, resolves the node, then renders or streams it. |
 
-The URL is `GET /modules/share?c=<key>&t=<node type>&l=<language>`.
+The URL is `GET /modules/share?c=<key>&t=<node type>&lang=<language>`.
+
+> The language parameter is `lang`, not `l`. Jahia's URL resolution reads `l` as a version label
+> and `v` as a version date, so a share URL carrying `l=` makes the render chain fail with
+> `Cannot use label <x> in workspace live`. It reads them only for a logged-in user, so such a URL
+> works for the guests it was made for and breaks for the contributor testing it.
+>
+> A URL still using `l=` is answered with a 302 to the `lang=` form, so old links keep working
+> without the reserved name ever reaching the render chain. Nothing inside the module can strip it
+> in place: the outbound URL rewriting reads `l` off the original request.
 
 Each parameter is validated for the query slot it occupies, and an unknown key, an unknown type, an
 expired link and a real miss all answer the same `404`:

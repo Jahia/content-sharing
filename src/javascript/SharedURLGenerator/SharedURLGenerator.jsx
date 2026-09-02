@@ -89,7 +89,8 @@ const getURL = ({key, nodeTypeName, lang, origin}) => {
     const url = new URL('/modules/share', origin);
     url.searchParams.append('c', key);
     url.searchParams.append('t', nodeTypeName);
-    url.searchParams.append('l', lang);
+    // 'lang', not 'l': Jahia's URL resolution reads 'l' as a version label.
+    url.searchParams.append('lang', lang);
     return url.toString();
 };
 

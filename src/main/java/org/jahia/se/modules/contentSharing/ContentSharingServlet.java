@@ -97,6 +97,21 @@ public class ContentSharingServlet extends HttpServlet {
      */
     private static final Pattern KEY_PATTERN = Pattern.compile("[A-Za-z0-9._~-]{8,128}");
 
+    /**
+     * Language parameter. NOT {@code l}: Jahia's {@link org.jahia.services.render.URLResolver}
+     * reads {@code l} as a version label and {@code v} as a version date, so a share URL carrying
+     * {@code l=fr} makes it call {@code setVersionLabel("fr")}, which fails with
+     * "Cannot use label fr in workspace live". It only reads them for a logged-in user, so the
+     * breakage shows up for the contributor testing the link and not for its guest audience.
+     */
+    private static final String LANG_PARAM = "lang";
+
+    /**
+     * The name this endpoint used before {@link #LANG_PARAM}. A URL carrying it is redirected
+     * rather than served, because {@code l} reaching the render chain is the whole problem.
+     */
+    private static final String LEGACY_LANG_PARAM = "l";
+
     /** BCP 47 shape, e.g. {@code en}, {@code fr-CA}. Anything else falls back to the default. */
     private static final Pattern LANGUAGE_PATTERN = Pattern.compile("[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*");
 
@@ -123,9 +138,20 @@ public class ContentSharingServlet extends HttpServlet {
         // Container decoding only: the query string is split before anything is percent-decoded.
         String contentKey = request.getParameter("c");
         String contentType = request.getParameter("t");
-        Locale locale = toLocale(request.getParameter("l"));
+        String languageTag = request.getParameter(LANG_PARAM);
+        String legacyLanguageTag = request.getParameter(LEGACY_LANG_PARAM);
 
+        // Set before any branch below writes, so every answer this endpoint gives carries them.
         applySecretUrlHeaders(response);
+
+        if (StringUtils.isBlank(languageTag) && StringUtils.isNotBlank(legacyLanguageTag)) {
+            // A URL still carrying `l` cannot be served in place: the render chain reads `l` off
+            // the original request, which no wrapper of ours reaches. Bounce it to the canonical
+            // form so the second request arrives without the reserved name.
+            redirectToCanonicalForm(response, contentKey, contentType, legacyLanguageTag);
+            return;
+        }
+        Locale locale = toLocale(languageTag);
 
         if (!isValidKey(contentKey)) {
             LOGGER.debug("Rejecting share request: malformed key");
@@ -318,6 +344,38 @@ public class ContentSharingServlet extends HttpServlet {
         response.setHeader("Referrer-Policy", "no-referrer");
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+    }
+
+    /**
+     * Sends a legacy {@code l=} link to the same resource addressed with {@link #LANG_PARAM}.
+     *
+     * <p>Temporary, never cached: the secret-URL headers are already set on this response.
+     * Validation is left to the redirected request, so a bad key still ends in the one uniform
+     * 404 and the redirect itself tells a caller nothing.</p>
+     */
+    private static void redirectToCanonicalForm(HttpServletResponse response,
+            String contentKey, String contentType, String languageTag) throws IOException {
+        // Query-only relative target. Building it from getRequestURI() would carry whatever path
+        // the caller sent, and a URI beginning "//host" turns the Location into a protocol-relative
+        // redirect to that host. A bare query string has no authority to steer, and the three
+        // values are percent-encoded, so it can only ever point back at this endpoint.
+        StringBuilder target = new StringBuilder("?");
+        appendParameter(target, "c", contentKey);
+        appendParameter(target, "t", contentType);
+        appendParameter(target, LANG_PARAM, languageTag);
+        response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+        response.setHeader("Location", target.toString());
+    }
+
+    private static void appendParameter(StringBuilder target, String name, String value)
+            throws UnsupportedEncodingException {
+        if (value == null) {
+            return;
+        }
+        if (target.charAt(target.length() - 1) != '?') {
+            target.append('&');
+        }
+        target.append(name).append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8.name()));
     }
 
     /** Sends a 500 unless the response is already on the wire, where sendError would throw. */
