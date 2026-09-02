@@ -140,30 +140,45 @@ public class ContentSharingServlet extends HttpServlet {
             return;
         }
 
-        JCRNodeWrapper node;
         try {
-            node = jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.LIVE_WORKSPACE, locale,
-                    new SharedNodeLookup(canonicalType, contentKey));
+            // Everything that touches the node stays INSIDE the callback. JCRTemplate logs the
+            // session out as soon as the callback returns, and a JCRNodeWrapper handed out past
+            // that point throws "This session has been closed" on first use.
+            jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.LIVE_WORKSPACE, locale,
+                    session -> {
+                        JCRNodeWrapper node = findSharedNode(session, canonicalType, contentKey);
+                        try {
+                            if (node == null) {
+                                sendNotFound(response);
+                            } else if (node.isNodeType(Constants.JAHIANT_FILE)) {
+                                streamFile(node, response);
+                            } else {
+                                renderContent(node, request, response);
+                            }
+                        } catch (IOException e) {
+                            throw new ServeFailure(e);
+                        }
+                        return null;
+                    });
+        } catch (ServeFailure e) {
+            throw e.getCause();
         } catch (RepositoryException e) {
-            LOGGER.error("Unable to resolve shared content of type {}", canonicalType, e);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            return;
+            LOGGER.error("Unable to serve shared content of type {}", canonicalType, e);
+            sendServerError(response);
+        }
+    }
+
+    /** Carries an {@link IOException} out of a {@link JCRCallback}, which may only throw {@link RepositoryException}. */
+    private static final class ServeFailure extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        private ServeFailure(IOException cause) {
+            super(cause);
         }
 
-        if (node == null) {
-            sendNotFound(response);
-            return;
-        }
-
-        try {
-            if (node.isNodeType(Constants.JAHIANT_FILE)) {
-                streamFile(node, response);
-            } else {
-                renderContent(node, request, response);
-            }
-        } catch (RepositoryException e) {
-            LOGGER.error("Unable to serve shared node {}", node.getPath(), e);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        @Override
+        public synchronized IOException getCause() {
+            return (IOException) super.getCause();
         }
     }
 
@@ -174,50 +189,41 @@ public class ContentSharingServlet extends HttpServlet {
     }
 
     /**
-     * Resolves the single node of {@code type} whose sharing key matches, or {@code null}.
+     * Resolves the single node of {@code canonicalType} whose sharing key matches, or {@code null}.
      *
-     * <p>A named class rather than a lambda, so the two validated values it closes over stay
-     * visible: {@code canonicalType} is a registry name, {@code contentKey} matched
-     * {@link #KEY_PATTERN} and is escaped again here for the literal slot.</p>
+     * <p>Takes the live session rather than opening its own, so the returned node stays valid for
+     * as long as the caller's callback runs.</p>
+     *
+     * @param canonicalType a name {@link NodeTypeRegistry} produced, safe for the identifier slot
+     * @param contentKey    a key that matched {@link #KEY_PATTERN}, escaped again here for the literal slot
      */
-    private static final class SharedNodeLookup implements JCRCallback<JCRNodeWrapper> {
+    private JCRNodeWrapper findSharedNode(JCRSessionWrapper session, String canonicalType, String contentKey)
+            throws RepositoryException {
+        String statement = "SELECT * FROM [" + canonicalType + "] AS node"
+                + " WHERE node.[" + KEY_PROPS + "] = '" + JCRContentUtils.sqlEncode(contentKey) + "'";
 
-        private final String canonicalType;
-        private final String contentKey;
+        JCRNodeIteratorWrapper nodes = session.getWorkspace().getQueryManager()
+                .createQuery(statement, Query.JCR_SQL2)
+                .execute()
+                .getNodes();
 
-        private SharedNodeLookup(String canonicalType, String contentKey) {
-            this.canonicalType = canonicalType;
-            this.contentKey = contentKey;
-        }
-
-        @Override
-        public JCRNodeWrapper doInJCR(JCRSessionWrapper session) throws RepositoryException {
-            String statement = "SELECT * FROM [" + canonicalType + "] AS node"
-                    + " WHERE node.[" + KEY_PROPS + "] = '" + JCRContentUtils.sqlEncode(contentKey) + "'";
-
-            JCRNodeIteratorWrapper nodes = session.getWorkspace().getQueryManager()
-                    .createQuery(statement, Query.JCR_SQL2)
-                    .execute()
-                    .getNodes();
-
-            while (nodes.hasNext()) {
-                JCRNodeWrapper candidate = (JCRNodeWrapper) nodes.next();
-                if (!candidate.isNodeType(SHARED_MIXIN)) {
-                    continue;
-                }
-                // The query already filtered on equality; re-comparing keeps an index quirk
-                // (case folding, normalisation) from widening the match.
-                if (!constantTimeEquals(contentKey, candidate.getPropertyAsString(KEY_PROPS))) {
-                    continue;
-                }
-                if (isExpired(candidate)) {
-                    LOGGER.info("Shared link for {} has expired", candidate.getPath());
-                    continue;
-                }
-                return candidate;
+        while (nodes.hasNext()) {
+            JCRNodeWrapper candidate = (JCRNodeWrapper) nodes.next();
+            if (!candidate.isNodeType(SHARED_MIXIN)) {
+                continue;
             }
-            return null;
+            // The query already filtered on equality; re-comparing keeps an index quirk
+            // (case folding, normalisation) from widening the match.
+            if (!constantTimeEquals(contentKey, candidate.getPropertyAsString(KEY_PROPS))) {
+                continue;
+            }
+            if (isExpired(candidate)) {
+                LOGGER.info("Shared link for {} has expired", candidate.getPath());
+                continue;
+            }
+            return candidate;
         }
+        return null;
     }
 
     /** {@code true} when the node carries an expiry date that is already in the past. */
@@ -314,6 +320,13 @@ public class ContentSharingServlet extends HttpServlet {
         response.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
     }
 
+    /** Sends a 500 unless the response is already on the wire, where sendError would throw. */
+    private static void sendServerError(HttpServletResponse response) throws IOException {
+        if (!response.isCommitted()) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     /** One answer for every non-hit, so the endpoint says nothing about which keys exist. */
     private static void sendNotFound(HttpServletResponse response) throws IOException {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
@@ -343,7 +356,7 @@ public class ContentSharingServlet extends HttpServlet {
             markup = renderService.render(resource, renderContext);
         } catch (RenderException e) {
             LOGGER.error("Unable to render shared node {}", node.getPath(), e);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            sendServerError(response);
             return;
         }
 
