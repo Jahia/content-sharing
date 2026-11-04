@@ -44,9 +44,24 @@
     overflow-x: auto;
 }
 
-/* The fixed columns (596 px, see the panel) plus room for the content to be read. */
+/* The fixed columns (744 px, see the panel) plus room for the content to be read. */
 .tableBox table {
-    min-width: 820px;
+    min-width: 960px;
+}
+
+/*
+ * A link sub-row: its content cell spans the row and the others step aside, so the address reads
+ * on one or two lines instead of being folded into the content column. The widths are inline
+ * styles from the table, hence the !important.
+ */
+.tableBox tr:has(.linkLine) > td:first-child {
+    flex: 1 1 100%;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.tableBox tr:has(.linkLine) > td:not(:first-child) {
+    display: none;
 }
 
 /* Rows are a fixed 48 px with hidden overflow, so a two-line cell is cut rather than grown. */
@@ -78,15 +93,9 @@
     min-width: 0;
 }
 
-.meta,
 .stack {
     display: flex;
     gap: var(--moon-spacing-small);
-}
-
-.meta {
-    align-items: center;
-    margin-top: var(--moon-spacing-nano);
 }
 
 /* A cell is a flex row: without `min-width: 0` the hint keeps to one line and is cut. */
@@ -100,10 +109,11 @@
 /* The address wraps anywhere: it is one long word, and cutting it would hide the key. */
 .linkLine {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--moon-spacing-small);
-    margin-top: var(--moon-spacing-nano);
+    width: 100%;
     min-width: 0;
+    white-space: normal;
 }
 
 .link {
@@ -117,9 +127,10 @@
     flex-shrink: 0;
 }
 
+/* Breaks after a slash; inside a node name only when the name alone is wider than the column. */
 .path {
     color: var(--color-gray_dark);
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
 /* Pagination keeps a fixed height: wrapped, its controls fall out of the card. */

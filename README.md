@@ -221,18 +221,18 @@ the workspace it is served from. Without it a link can only be found by opening 
 created on.
 
 ![Site Settings, Shared links: eight links of both kinds in English and French, one in each
-state the panel reports, each with its address and a Copy link button, Revoke or Publish
-revocation on every row, and the Export CSV and Export JSON buttons in the
-header](doc/images/shared-links-panel.png)
+state the panel reports, with their kind, language, expiry, state and action in columns; one row
+is expanded to its address and a Copy link button](doc/images/shared-links-panel.png)
 
 Each row carries the action it needs, and the panel runs every read and every change as the person
 using it: someone who cannot edit the content cannot revoke its link. **Revoke** clears that one
 key, in that one language, and leaves every other link alone.
 
-Each row shows the address the link opens, built the way the Content Editor field builds it, with
-**Copy link** next to it. It is the key the serving workspace holds: for a link to published
-content that has a live side, the live key, so a key regenerated in authoring and not yet published
-shows the address visitors still hold.
+Each row expands to the address the link opens, with **Copy link** next to it: click the row, or
+focus it and press Enter or Space. The address is built the way the Content Editor field builds it,
+from the key the serving workspace holds: for a link to published content that has a live side,
+the live key, so a key regenerated in authoring and not yet published shows the address visitors
+still hold.
 
 A link to published content is served from the live workspace, so clearing its key only takes effect
 once that change is published. Such a link stays listed as **Revoked, still live**, with the action

@@ -6,6 +6,15 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The Shared links panel is back to one column per fact (content, kind, language, expiry, state,
+  action), and each row expands to its address and **Copy link**, by a click or by Enter or Space
+  on the focused row. Labels are shorter so that six columns fit: an expired link reads *Expired*
+  with its date underneath, a review link with no expiry date reads *Missing* with the reason
+  underneath, and the action that publishes a revocation reads *Publish*.
+- A content path wraps after a slash rather than inside a node name.
+
 ## 2.4.0 - 2026-11-04
 
 ### Added
