@@ -6,6 +6,18 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The Shared links panel shows the address each link opens, with a **Copy link** button. For a
+  link to published content it is the address visitors hold: the live key while there is one. The
+  CSV and JSON exports leave the addresses out, since every one of them is a working link.
+
+### Fixed
+
+- A share link dropped Jahia's context path: on an instance not served from the web root, every
+  generated address pointed to the wrong place. The editor field and the panel now build the
+  address in one place, under the context path, and keep a path given in the `origin` option.
+
 ## 2.3.3 - 2026-11-04
 
 ### Fixed

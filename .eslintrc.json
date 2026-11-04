@@ -1,6 +1,9 @@
 {
   "extends": "@jahia",
   "root": true,
+  "env": {
+    "es2020": true
+  },
   "plugins": [
     "json"
   ]

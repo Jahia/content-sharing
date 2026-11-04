@@ -151,6 +151,24 @@ describe('toRows', () => {
         expect(rows[0].language).toBe('pt-BR');
     });
 
+    it('carries the key of the workspace that serves the link', () => {
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/a', {en: {sharedKey: 'NEW'}}), node('u2', '/sites/demo/b', {en: {sharedKey: 'DRAFT'}})],
+            review: [node('u3', '/sites/demo/c', {en: {reviewKey: 'REVIEW'}})],
+            liveShared: [node('u1', '/sites/demo/a', {en: {sharedKey: 'OLD'}}), node('u4', '/sites/demo/d', {en: {sharedKey: 'GONE'}})]
+        }), ['en']);
+        const key = path => rows.find(r => r.path === path).key;
+
+        // Regenerated in authoring, not published: visitors still hold the live key.
+        expect(key('/sites/demo/a')).toBe('OLD');
+        // Never published: the authoring key, which the state says does not work yet.
+        expect(key('/sites/demo/b')).toBe('DRAFT');
+        // A review link is served from authoring.
+        expect(key('/sites/demo/c')).toBe('REVIEW');
+        // Cleared in authoring, still live: the key that still works.
+        expect(key('/sites/demo/d')).toBe('GONE');
+    });
+
     it('sorts by path, then kind, then language', () => {
         const rows = rowsOf(answer({
             shared: [

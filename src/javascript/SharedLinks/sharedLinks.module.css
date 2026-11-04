@@ -97,6 +97,26 @@
     gap: var(--moon-spacing-nano);
 }
 
+/* The address wraps anywhere: it is one long word, and cutting it would hide the key. */
+.linkLine {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--moon-spacing-small);
+    margin-top: var(--moon-spacing-nano);
+    min-width: 0;
+}
+
+.link {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--moon-font-family-mono, ui-monospace, monospace);
+}
+
+.linkLine > button {
+    flex-shrink: 0;
+}
+
 .path {
     color: var(--color-gray_dark);
     overflow-wrap: anywhere;

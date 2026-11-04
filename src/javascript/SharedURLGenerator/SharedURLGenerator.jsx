@@ -3,6 +3,7 @@ import * as PropTypes from 'prop-types';
 import {useTranslation} from 'react-i18next';
 import {Button, Reload, Copy, Typography} from '@jahia/moonstone';
 
+import {defaultOrigin, shareUrl} from '../shareUrl';
 import styles from './SharedURLGenerator.module.css';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
@@ -60,23 +61,10 @@ const getRandomString = ({length, format}) => {
     return result;
 };
 
-const getURL = ({key, nodeTypeName, lang, origin}) => {
-    if (!key) {
-        return;
-    }
-
-    const url = new URL('/modules/share', origin);
-    url.searchParams.append('c', key);
-    url.searchParams.append('t', nodeTypeName);
-    // 'lang', not 'l': Jahia's URL resolution reads 'l' as a version label.
-    url.searchParams.append('lang', lang);
-    return url.toString();
-};
-
 const SharedURLGeneratorCMP = ({field, value, onChange, editorContext}) => {
     const length = field.selectorOptions.find(option => option.name === 'length')?.value || 24;
     const format = field.selectorOptions.find(option => option.name === 'format')?.value || 'aA#';
-    const origin = field.selectorOptions.find(option => option.name === 'origin')?.value || window.location.origin;
+    const origin = field.selectorOptions.find(option => option.name === 'origin')?.value || defaultOrigin();
     const {nodeTypeName, lang} = editorContext;
     const {t} = useTranslation('content-sharing');
 
@@ -88,12 +76,7 @@ const SharedURLGeneratorCMP = ({field, value, onChange, editorContext}) => {
         }
     }, [value, length, format, onChange]);
 
-    const url = getURL({
-        key: value,
-        origin,
-        nodeTypeName,
-        lang
-    });
+    const url = shareUrl({key: value, nodeType: nodeTypeName, language: lang, base: origin});
     const handleNewKey = () => onChange(getRandomString({length, format}));
     const handleCopy = () => navigator.clipboard.writeText(url);
 
