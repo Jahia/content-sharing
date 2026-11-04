@@ -7,5 +7,43 @@
     "url": {
       "generateKey": "Cliquez sur le bouton 'CRÉER UNE NOUVELLE URL' pour générer l'URL"
     }
+  },
+  "panel": {
+    "title": "Liens partagés",
+    "intro": "Tous les liens qui permettent à une personne sans compte d'accéder à un contenu de ce site. Révoquer un lien efface sa clé : l'adresse cesse aussitôt de fonctionner.",
+    "introLive": "Un lien vers du contenu publié est servi depuis l'espace live : effacer sa clé ne prend effet qu'une fois ce changement publié. D'ici là le lien reste listé comme « Révoqué, toujours en ligne » et l'action de sa ligne publie la révocation.",
+    "none": "Aucun contenu de ce site n'est partagé.",
+    "notOnSite": "Le module Content Sharing n'est pas activé sur ce site.",
+    "error": "Les liens n'ont pas pu être lus.",
+    "never": "Sans expiration",
+    "noExpiry": "Sans date d'expiration, ce lien ne fonctionne pas",
+    "expiredOn": "Expiré le {{date}}",
+    "revoke": "Révoquer",
+    "publishRevocation": "Publier la révocation",
+    "exportCsv": "Exporter en CSV",
+    "exportJson": "Exporter en JSON",
+    "kind": {
+      "published": "Contenu protégé",
+      "review": "Relecture"
+    },
+    "column": {
+      "content": "Contenu",
+      "kind": "Type",
+      "language": "Langue",
+      "expiry": "Expiration",
+      "state": "État",
+      "action": "Action"
+    },
+    "state": {
+      "authoring": "Édition",
+      "live": "En ligne",
+      "notYetLive": "Pas encore publié",
+      "pendingRevocation": "Révoqué, toujours en ligne"
+    },
+    "reload": "Recharger",
+    "pagination": {
+      "itemsPerPage": "Liens par page",
+      "of": "sur"
+    }
   }
 }

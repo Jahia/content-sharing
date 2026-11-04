@@ -7,5 +7,43 @@
     "url": {
       "generateKey": "Klicken Sie auf die Schaltfläche 'NEUE URL ERSTELLEN', um die URL zu generieren"
     }
+  },
+  "panel": {
+    "title": "Geteilte Links",
+    "intro": "Alle Links, über die jemand ohne Konto Inhalte dieser Website erreicht. Beim Widerrufen wird der Schlüssel gelöscht: die Adresse funktioniert sofort nicht mehr.",
+    "introLive": "Ein Link auf veröffentlichte Inhalte wird aus dem Live-Bereich ausgeliefert: Das Löschen seines Schlüssels wirkt erst, wenn diese Änderung veröffentlicht ist. Bis dahin bleibt der Link als „Widerrufen, noch live\" gelistet, und die Aktion in seiner Zeile veröffentlicht den Widerruf.",
+    "none": "Von dieser Website ist nichts geteilt.",
+    "notOnSite": "Das Modul Content Sharing ist auf dieser Website nicht aktiviert.",
+    "error": "Die Links konnten nicht gelesen werden.",
+    "never": "Ohne Ablauf",
+    "noExpiry": "Ohne Ablaufdatum funktioniert dieser Link nicht",
+    "expiredOn": "Abgelaufen am {{date}}",
+    "revoke": "Widerrufen",
+    "publishRevocation": "Widerruf veröffentlichen",
+    "exportCsv": "CSV exportieren",
+    "exportJson": "JSON exportieren",
+    "kind": {
+      "published": "Geschützter Inhalt",
+      "review": "Prüfung"
+    },
+    "column": {
+      "content": "Inhalt",
+      "kind": "Art",
+      "language": "Sprache",
+      "expiry": "Ablauf",
+      "state": "Status",
+      "action": "Aktion"
+    },
+    "state": {
+      "authoring": "Bearbeitung",
+      "live": "Live",
+      "notYetLive": "Noch nicht veröffentlicht",
+      "pendingRevocation": "Widerrufen, noch live"
+    },
+    "reload": "Neu laden",
+    "pagination": {
+      "itemsPerPage": "Links pro Seite",
+      "of": "von"
+    }
   }
 }

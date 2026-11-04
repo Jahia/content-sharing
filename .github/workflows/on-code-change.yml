@@ -66,7 +66,7 @@ jobs:
           retention-days: 30
 
   javascript:
-    name: Lint and audit the front-end
+    name: Check the front-end
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -75,6 +75,7 @@ jobs:
           node-version: '22'
       - run: yarn install --frozen-lockfile
       - run: yarn lint
+      - run: yarn test
       # Reports, does not block: the advisories present today are pre-existing and all but one
       # are build-time only. Blocking here would mean the gate can never pass, which teaches the
       # team to ignore it. Tighten this once html-parse-stringify2 (via react-i18next@11) is off

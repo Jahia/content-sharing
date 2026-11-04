@@ -101,6 +101,10 @@ committed, so a build resolves the same tree every time, and the generated front
 field even when a build skips the yarn step. The editor field uses Moonstone and the React runtime
 jContent provides; the module declares no Material UI dependency.
 
+`yarn test` runs the front-end unit tests (the panel's reporting, the exports, and that the
+four shipped languages stay in step with each other). The pull-request workflow runs them
+alongside the linter.
+
 A package for a release is built by the workflow, never locally: `jahia-maven-plugin` writes the
 build machine's own path into the manifest of a local build, and the workflow both sets
 `JAHIA_DISABLE_SOURCE_FOLDERS` and refuses a package that carries one or that has no editor field.
@@ -199,12 +203,38 @@ Leaving the chrome out gives a cleaner read; keeping it keeps the site's brandin
 stranger is looking at. That is a decision for the site, which is why the module makes it possible
 rather than making it for you.
 
+## Seeing and revoking what is shared
+
+**Site Settings > Shared links** lists every link that lets someone without an account reach content
+of this site: both kinds, every language, with the content each one points at, its expiry date and
+the workspace it is served from. Without it a link can only be found by opening the content it was
+created on.
+
+Each row carries the action it needs, and the panel runs every read and every change as the person
+using it: someone who cannot edit the content cannot revoke its link. **Revoke** clears that one
+key, in that one language, and leaves every other link alone.
+
+A link to published content is served from the live workspace, so clearing its key only takes effect
+once that change is published. Such a link stays listed as **Revoked, still live**, with the action
+that publishes the revocation. Two other states are worth knowing, because a visitor cannot tell
+them from a working link either way:
+
+| State | What it means |
+| --- | --- |
+| Live | Served from the live workspace. The link works. |
+| Revoked, still live | The key is gone from authoring, live still serves it. Publish the revocation. |
+| Not published yet | The key is set in authoring but has never been published. The link does not work yet. |
+| Authoring | A review link, which is always served from the authoring workspace. |
+
+A review link with no expiry date is flagged as well: the endpoint refuses it, so it never worked.
+
+**Export CSV** and **Export JSON** hand the whole list to the browser; nothing leaves the page.
+
 ## Known limitations
 
 - A key is stored as an ordinary indexed JCR property, so it is readable wherever the node's
   properties are.
-- Nothing throttles `/share`, and there is no record of who opened a link.
-- The repository has no automated tests yet.
+- Opening `/share` is not throttled and leaves no record of who opened a link.
 - `@material-ui/core@3` and `@jahia/react-material` are deprecated; the selector only needs
   Moonstone.
 

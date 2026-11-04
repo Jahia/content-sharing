@@ -1,11 +1,49 @@
 {
   "label": {
-    "btn":{
+    "btn": {
       "generateKey": "Create new url",
       "copyUrl": "Copy the URL"
     },
-    "url":{
-      "generateKey" : "Click the button 'CREATE NEW URL' to generate the url"
+    "url": {
+      "generateKey": "Click the button 'CREATE NEW URL' to generate the url"
+    }
+  },
+  "panel": {
+    "title": "Shared links",
+    "intro": "Every link that lets someone without an account reach content of this site. Revoking a link clears its key: the address stops working immediately.",
+    "introLive": "A link to published content is served from the live workspace, so clearing its key takes effect once that change is published. Until then the link stays listed as \"Revoked, still live\" and the action on its row publishes the revocation.",
+    "none": "No content of this site is shared.",
+    "notOnSite": "This site does not have the Content Sharing module enabled.",
+    "error": "The links could not be read.",
+    "never": "No expiry",
+    "noExpiry": "No expiry date, so this link does not work",
+    "expiredOn": "Expired {{date}}",
+    "revoke": "Revoke",
+    "publishRevocation": "Publish revocation",
+    "exportCsv": "Export CSV",
+    "exportJson": "Export JSON",
+    "kind": {
+      "published": "Protected content",
+      "review": "Review"
+    },
+    "column": {
+      "content": "Content",
+      "kind": "Kind",
+      "language": "Language",
+      "expiry": "Expiry",
+      "state": "State",
+      "action": "Action"
+    },
+    "state": {
+      "authoring": "Authoring",
+      "live": "Live",
+      "notYetLive": "Not published yet",
+      "pendingRevocation": "Revoked, still live"
+    },
+    "reload": "Reload",
+    "pagination": {
+      "itemsPerPage": "Links per page",
+      "of": "of"
     }
   }
 }
