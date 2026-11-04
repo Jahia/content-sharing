@@ -4,6 +4,35 @@ All notable changes to this module are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the module follows
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- **A second kind of link, for review before publication.** `cshmix:reviewUrl` carries its own key
+  and its own expiry date, and serves the content as it stands in the authoring workspace rather
+  than the published version. It lets someone outside the site read a draft without an account and
+  without the content being published first.
+
+  A node can carry both kinds at once, with different keys and different expiry dates. Which one a
+  request is depends on the key alone, because the two keys live in different properties: holding a
+  link to published content does not let anyone ask for the unpublished version of it.
+
+  **A review link must carry an expiry date**; one without is refused. Reviewers are outside the
+  site, so the link has to stop on its own.
+
+  A review link renders the page from the authoring workspace, so it shows everything on that page
+  that is not published yet, including other people's work in progress. Reviewers see a notice
+  saying so. It is a separate mixin rather than a field on the first one so that a site can decide
+  separately where review sharing is allowed.
+
+  Images, stylesheets and scripts in a review rendering come back through the endpoint, signed with
+  the sharing key, and are served under the same key and the same expiry date as the page. Without
+  that a draft arrived as text with nothing else loading, because its files are addressed in the
+  authoring workspace and a reviewer may not read them. The signature means only a caller holding
+  the key can ask for a file, and the endpoint refuses a path that is not a file or belongs to
+  another site. Jahia's sizing query is dropped, so a file arrives as stored. Navigation links are
+  not rewritten and do not open for a reviewer, which is what the notice says.
+
 ## 2.1.0 - 2026-11-04
 
 ### Added

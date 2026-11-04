@@ -105,9 +105,59 @@ A package for a release is built by the workflow, never locally: `jahia-maven-pl
 build machine's own path into the manifest of a local build, and the workflow both sets
 `JAHIA_DISABLE_SOURCE_FOLDERS` and refuses a package that carries one or that has no editor field.
 
+## Two kinds of link
+
+| | **Share protected content** | **Share for review before publication** |
+|---|---|---|
+| mixin | `cshmix:sharedUrl` | `cshmix:reviewUrl` |
+| serves | the **published** content, as a visitor sees it | the content **as it stands in the authoring workspace**, published or not |
+| expiry | optional | **required**; a link without one does not work |
+| audience | anyone you hand the link to | people reviewing a draft |
+
+They are separate on purpose. A node can carry both at once, with different keys and different
+expiry dates, so handing a draft to three reviewers for a fortnight does not also hand out a
+permanent link to the published page.
+
+Which one a request is depends on the key alone: the two keys live in different properties, so a
+link is only ever one kind and nothing in the URL lets a caller ask for the other. In particular,
+holding a link to published content does not let anyone see the unpublished version of it.
+
+### What a review link exposes
+
+A review link renders the page from the authoring workspace, so it shows **everything on that page
+that has not been published yet**, including work by other people in areas of the page you did not
+think about. That is what makes it useful for review, and it is why the expiry is required and why
+the capability is its own mixin rather than a second field on the first one: a site can decide
+separately where review sharing is allowed at all.
+
+Reviewers see a notice saying the content is a draft, may still change, and that its links may not
+open for them.
+
+**Files in a review rendering come back through this endpoint.** A draft renders out of the
+authoring workspace, so every image, stylesheet and script in it is addressed under
+`/files/default/...`, which a reviewer may not read: without this the page would arrive as text
+with nothing else loading. Those addresses are rewritten to
+
+```
+/modules/share?c=<key>&t=<type>&asset=<repository path>&sig=<signature>
+```
+
+and the endpoint streams the file under the same conditions as the page: the same key, the same
+expiry date, checked again on every file.
+
+The signature is what keeps this from becoming a reader for the whole authoring workspace. It is
+computed with the sharing key as the secret, so only a caller holding that key can produce one, and
+such a caller can already read the page that names those paths. The endpoint also refuses a path
+that is not a file, or that belongs to another site.
+
+Jahia's sizing query is dropped, so a reviewer gets the file as stored rather than a resized
+variant. Navigation links are **not** rewritten: they lead to the authoring workspace and will not
+open for a reviewer, which is what the notice says. Rewriting them would be sharing the site, not
+the page.
+
 ## What can be shared
 
-The mixin applies to **content items** (`jnt:content`), **files** (`jnt:file`) and **pages**
+Both mixins apply to **content items** (`jnt:content`), **files** (`jnt:file`) and **pages**
 (`jnt:page`).
 
 A shared **file** is served as a download and needs nothing from the site. A shared **page**
@@ -142,7 +192,7 @@ rendering:
 
 | attribute | meaning |
 |---|---|
-| `contentSharing.sharedRendering` | set by this module before it renders a shared node |
+| `contentSharing.sharedRendering` | set by this module before it renders a shared node, of either kind |
 | `contentSharing.noticeRendered` | set it to `true` and the default notice is left out |
 
 Leaving the chrome out gives a cleaner read; keeping it keeps the site's branding on a page a

@@ -1,0 +1,16 @@
+{
+  "name": "cshmix:reviewUrl",
+  "fields": [
+    {
+      "name": "cshare:reviewUrl",
+      "selectorType": "SharedURLGenerator",
+      "selectorOptionsMap": {
+        "length": 24,
+        "format": "aA#"
+      }
+    },
+    {
+      "name": "cshare:reviewUrlExpiry"
+    }
+  ]
+}
