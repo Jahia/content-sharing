@@ -133,6 +133,28 @@ separately where review sharing is allowed at all.
 Reviewers see a notice saying the content is a draft, may still change, and that its links may not
 open for them.
 
+**Files in a review rendering come back through this endpoint.** A draft renders out of the
+authoring workspace, so every image, stylesheet and script in it is addressed under
+`/files/default/...`, which a reviewer may not read: without this the page would arrive as text
+with nothing else loading. Those addresses are rewritten to
+
+```
+/modules/share?c=<key>&t=<type>&asset=<repository path>&sig=<signature>
+```
+
+and the endpoint streams the file under the same conditions as the page: the same key, the same
+expiry date, checked again on every file.
+
+The signature is what keeps this from becoming a reader for the whole authoring workspace. It is
+computed with the sharing key as the secret, so only a caller holding that key can produce one, and
+such a caller can already read the page that names those paths. The endpoint also refuses a path
+that is not a file, or that belongs to another site.
+
+Jahia's sizing query is dropped, so a reviewer gets the file as stored rather than a resized
+variant. Navigation links are **not** rewritten: they lead to the authoring workspace and will not
+open for a reviewer, which is what the notice says. Rewriting them would be sharing the site, not
+the page.
+
 ## What can be shared
 
 Both mixins apply to **content items** (`jnt:content`), **files** (`jnt:file`) and **pages**

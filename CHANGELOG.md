@@ -25,6 +25,14 @@ All notable changes to this module are documented here. The format follows
   saying so. It is a separate mixin rather than a field on the first one so that a site can decide
   separately where review sharing is allowed.
 
+  Images, stylesheets and scripts in a review rendering come back through the endpoint, signed with
+  the sharing key, and are served under the same key and the same expiry date as the page. Without
+  that a draft arrived as text with nothing else loading, because its files are addressed in the
+  authoring workspace and a reviewer may not read them. The signature means only a caller holding
+  the key can ask for a file, and the endpoint refuses a path that is not a file or belongs to
+  another site. Jahia's sizing query is dropped, so a file arrives as stored. Navigation links are
+  not rewritten and do not open for a reviewer, which is what the notice says.
+
 ## 2.1.0 - 2026-11-04
 
 ### Added

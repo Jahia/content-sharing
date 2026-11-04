@@ -25,6 +25,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.jcr.Binary;
 import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
@@ -40,6 +42,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
@@ -113,6 +117,25 @@ public class ContentSharingServlet extends HttpServlet {
 
     /** Resource bundle holding the visitor-facing strings. */
     private static final String BUNDLE = "resources.content-sharing";
+
+    /** Asset request: the repository path of one file, and the signature that vouches for it. */
+    private static final String ASSET_PARAM = "asset";
+    private static final String SIGNATURE_PARAM = "sig";
+
+    /**
+     * How Jahia addresses a file in the authoring workspace. A review rendering is full of these
+     * and a reviewer may read none of them, so they are rewritten to come back through here.
+     */
+    private static final String EDIT_FILES_PREFIX = "/files/" + Constants.EDIT_WORKSPACE;
+
+    /** A file URL in a review rendering, up to whatever ends it in markup or in a stylesheet. */
+    private static final Pattern EDIT_FILE_URL =
+            Pattern.compile(Pattern.quote(EDIT_FILES_PREFIX) + "(/[^\"'()\\s?#<>\\\\]+)");
+
+    /** Shape of a repository path this endpoint will look a file up at. */
+    private static final Pattern ASSET_PATH = Pattern.compile("/sites/[A-Za-z0-9._\\-]+/[A-Za-z0-9._\\-/%@ ()+,'\u00c0-\u024f]+");
+
+    private static final String HMAC = "HmacSHA256";
 
     /**
      * The two kinds of link this endpoint serves, each pinned to one workspace.
@@ -229,6 +252,13 @@ public class ContentSharingServlet extends HttpServlet {
             return;
         }
 
+        String assetPath = request.getParameter(ASSET_PARAM);
+        if (assetPath != null) {
+            serveAsset(assetPath, request.getParameter(SIGNATURE_PARAM), canonicalType, contentKey,
+                    locale, response);
+            return;
+        }
+
         // Each kind is looked up in its own workspace. A key lives in one property or the other,
         // so a request can only ever match one of them.
         for (LinkKind kind : LinkKind.values()) {
@@ -269,13 +299,149 @@ public class ContentSharingServlet extends HttpServlet {
                         if (node.isNodeType(Constants.JAHIANT_FILE)) {
                             streamFile(node, response);
                         } else {
-                            renderContent(node, kind, request, response);
+                            renderContent(node, kind, canonicalType, contentKey, request, response);
                         }
                     } catch (IOException e) {
                         throw new ServeFailure(e);
                     }
                     return Boolean.TRUE;
                 });
+    }
+
+    /**
+     * Streams one file of a review rendering.
+     *
+     * <p>A review rendering comes out of the authoring workspace, so every image, stylesheet and
+     * script in it is addressed under {@value #EDIT_FILES_PREFIX}, which a reviewer may not read:
+     * the page would arrive as text with nothing else loading. Those addresses are rewritten to
+     * come back here, where the same key that bought the page buys its files.</p>
+     *
+     * <p>The signature is what keeps this from becoming a reader for the whole authoring
+     * workspace. It is computed with the key as the secret, so only a caller holding the key can
+     * produce one -- and such a caller could already read the page that lists these paths, so the
+     * signature grants nothing the key did not. The node type and the site are checked as well,
+     * so a signature cannot be spent on something that is not a file of the shared node's site.</p>
+     */
+    private void serveAsset(String assetPath, String signature, String canonicalType,
+            String contentKey, Locale locale, HttpServletResponse response) throws IOException {
+        if (!ASSET_PATH.matcher(assetPath).matches() || assetPath.contains("..")) {
+            LOGGER.debug("Rejecting asset request: malformed path");
+            sendNotFound(response);
+            return;
+        }
+        if (signature == null || !constantTimeEquals(sign(contentKey, assetPath), signature)) {
+            LOGGER.debug("Rejecting asset request: signature does not match");
+            sendNotFound(response);
+            return;
+        }
+
+        try {
+            Boolean served = jcrTemplate.doExecuteWithSystemSessionAsUser(null,
+                    LinkKind.REVIEW.workspace, locale, session -> {
+                        // Re-resolved every time, so an expired or withdrawn link stops serving
+                        // files at the same moment it stops serving the page.
+                        JCRNodeWrapper shared = findSharedNode(session, LinkKind.REVIEW, canonicalType, contentKey);
+                        if (shared == null) {
+                            return Boolean.FALSE;
+                        }
+                        JCRNodeWrapper asset = assetOfSameSite(session, shared, assetPath);
+                        if (asset == null) {
+                            return Boolean.FALSE;
+                        }
+                        try {
+                            streamFile(asset, response);
+                        } catch (IOException e) {
+                            throw new ServeFailure(e);
+                        }
+                        return Boolean.TRUE;
+                    });
+            if (!Boolean.TRUE.equals(served)) {
+                sendNotFound(response);
+            }
+        } catch (ServeFailure e) {
+            throw e.getCause();
+        } catch (RepositoryException e) {
+            LOGGER.error("Unable to serve an asset of a review link", e);
+            sendServerError(response);
+        }
+    }
+
+    /**
+     * The file at {@code assetPath}, when it is a file and it belongs to the same site as the
+     * shared node. {@code null} otherwise, which the caller answers as a miss.
+     */
+    private static JCRNodeWrapper assetOfSameSite(JCRSessionWrapper session, JCRNodeWrapper shared,
+            String assetPath) throws RepositoryException {
+        JCRNodeWrapper asset;
+        try {
+            asset = session.getNode(assetPath);
+        } catch (PathNotFoundException e) {
+            return null;
+        }
+        if (!asset.isNodeType(Constants.JAHIANT_FILE)) {
+            LOGGER.debug("Rejecting asset request: {} is not a file", assetPath);
+            return null;
+        }
+        String site = shared.getResolveSite().getPath();
+        if (!asset.getPath().startsWith(site + "/")) {
+            LOGGER.warn("Rejecting asset request: {} is outside {}", assetPath, site);
+            return null;
+        }
+        return asset;
+    }
+
+    /**
+     * Rewrites every authoring-workspace file address in a review rendering so that it comes back
+     * through this endpoint, signed.
+     *
+     * <p>A plain scan of the whole document on purpose: these addresses turn up in {@code src},
+     * in {@code srcset}, in inline {@code url()} and in the data a client island hydrates from,
+     * and all of them have to be reachable for the page to look like the page.</p>
+     *
+     * <p>Any sizing query Jahia appended is dropped, so the reviewer gets the file as stored
+     * rather than a resized variant.</p>
+     */
+    static String withProxiedAssets(String markup, String contentKey, String canonicalType) {
+        Matcher matcher = EDIT_FILE_URL.matcher(markup);
+        StringBuilder out = new StringBuilder(markup.length());
+        while (matcher.find()) {
+            String path = matcher.group(1);
+            String replacement;
+            try {
+                replacement = "/modules/share?c=" + URLEncoder.encode(contentKey, StandardCharsets.UTF_8.name())
+                        + "&t=" + URLEncoder.encode(canonicalType, StandardCharsets.UTF_8.name())
+                        + "&" + ASSET_PARAM + "=" + URLEncoder.encode(path, StandardCharsets.UTF_8.name())
+                        + "&" + SIGNATURE_PARAM + "=" + sign(contentKey, path);
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException("UTF-8 is always available", e);
+            }
+            matcher.appendReplacement(out, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(out);
+        return out.toString();
+    }
+
+    /**
+     * Signs one asset path with the sharing key.
+     *
+     * <p>The key is the secret because it is already the credential: whoever holds it can read the
+     * page that names these paths. Signing with it means a path this endpoint will serve can only
+     * come from a rendering it produced, without the module keeping any state between the two
+     * requests.</p>
+     */
+    static String sign(String contentKey, String assetPath) {
+        try {
+            Mac mac = Mac.getInstance(HMAC);
+            mac.init(new SecretKeySpec(contentKey.getBytes(StandardCharsets.UTF_8), HMAC));
+            byte[] digest = mac.doFinal(assetPath.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(32);
+            for (int i = 0; i < 16; i++) {
+                hex.append(String.format("%02x", digest[i]));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new IllegalStateException(HMAC + " is required of every JRE", e);
+        }
     }
 
     /** Carries an {@link IOException} out of a {@link JCRCallback}, which may only throw {@link RepositoryException}. */
@@ -487,8 +653,9 @@ public class ContentSharingServlet extends HttpServlet {
                 + "</body></html>");
     }
 
-    private void renderContent(JCRNodeWrapper node, LinkKind kind, HttpServletRequest request,
-            HttpServletResponse response) throws RepositoryException, IOException {
+    private void renderContent(JCRNodeWrapper node, LinkKind kind, String canonicalType,
+            String contentKey, HttpServletRequest request, HttpServletResponse response)
+            throws RepositoryException, IOException {
         Resource resource = new Resource(node, "html", "default", "page");
         RenderContext renderContext = new RenderContext(unwrapRequest(request), response,
                 JCRSessionFactory.getInstance().getCurrentUser());
@@ -514,6 +681,10 @@ public class ContentSharingServlet extends HttpServlet {
             LOGGER.error("Unable to render shared node {}", node.getPath(), e);
             sendServerError(response);
             return;
+        }
+
+        if (kind == LinkKind.REVIEW) {
+            markup = withProxiedAssets(markup, contentKey, canonicalType);
         }
 
         if (!Boolean.TRUE.equals(request.getAttribute(NOTICE_RENDERED_ATTRIBUTE))) {
