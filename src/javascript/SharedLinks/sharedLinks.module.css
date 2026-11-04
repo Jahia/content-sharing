@@ -46,10 +46,12 @@
     min-height: 48px;
 }
 
+/* Cells are `nowrap` with hidden overflow, so a long path is cut rather than wrapped. */
 .tableBox tbody td {
     height: auto;
     padding-top: var(--moon-spacing-small);
     padding-bottom: var(--moon-spacing-small);
+    white-space: normal;
 }
 
 .pathCell {

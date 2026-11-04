@@ -212,6 +212,10 @@ export const SharedLinksPanel = () => {
                         primaryKey="id"
                         data={shown}
                         columns={columns}
+                        // The host's DataTable paginates by itself, 5 rows at a time, whatever the
+                        // installed typings say. Its pagination also returns to page 1 every time
+                        // the data changes, which revoking does, so the panel keeps its own.
+                        enablePagination={false}
                         data-cs-role="links-table"
                     />
                 </div>
