@@ -97,6 +97,18 @@ A package for a release is built by the workflow, never locally: `jahia-maven-pl
 build machine's own path into the manifest of a local build, and the workflow both sets
 `JAHIA_DISABLE_SOURCE_FOLDERS` and refuses a package that carries one or that has no editor field.
 
+## Rendering a shared content item
+
+A shared **file** is served as a download and needs nothing from the site. A shared **page** is
+rendered by its own template.
+
+A shared **content item** is rendered in a page context, so the site's template set has to offer a
+template that applies to it, as it does for any content item reachable by its own URL
+(`jmix:mainResource`). A site whose template set offers none renders nothing for such a link, and
+the endpoint reports the failure. This module ships no template of its own: it does not know what a
+shared item should look like on your site, and a template that applies to everything would override
+the site's own.
+
 ## Known limitations
 
 - A key is stored as an ordinary indexed JCR property, so it is readable wherever the node's
