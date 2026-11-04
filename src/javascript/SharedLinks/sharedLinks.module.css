@@ -18,7 +18,11 @@
     isolation: isolate;
 }
 
-/* LayoutContent sizes its content on max-content whatever the root does, so it needs this too. */
+/*
+ * The page itself is grey; the report sits on a white sheet with the layout's padding around it,
+ * as every other screen of this kind does. LayoutContent sizes its content on max-content whatever
+ * the root does, so the sheet needs the containment too.
+ */
 .card {
     display: flex;
     flex-direction: column;
@@ -46,10 +50,12 @@
     min-height: 48px;
 }
 
+/* Cells are `nowrap` with hidden overflow, so a long path is cut rather than wrapped. */
 .tableBox tbody td {
     height: auto;
     padding-top: var(--moon-spacing-small);
     padding-bottom: var(--moon-spacing-small);
+    white-space: normal;
 }
 
 .pathCell {

@@ -4,7 +4,7 @@ import {useSelector} from 'react-redux';
 import {useMutation, useQuery} from '@apollo/client';
 import {
     Button, Chip, DataTable, Delete, Download, Header, LayoutContent, Loader, Pagination,
-    Publish, Reload, Typography
+    Paper, Publish, Reload, Typography
 } from '@jahia/moonstone';
 
 import {linksQuery, PUBLISH, REVOKE, SITE_CONTEXT} from './queries';
@@ -212,6 +212,10 @@ export const SharedLinksPanel = () => {
                         primaryKey="id"
                         data={shown}
                         columns={columns}
+                        // The host's DataTable paginates by itself, 5 rows at a time, whatever the
+                        // installed typings say. Its pagination also returns to page 1 every time
+                        // the data changes, which revoking does, so the panel keeps its own.
+                        enablePagination={false}
                         data-cs-role="links-table"
                     />
                 </div>
@@ -281,7 +285,7 @@ export const SharedLinksPanel = () => {
                     />
                 }
             >
-                <div className={styles.card}>
+                <Paper hasPadding className={styles.card}>
                     <span className={styles.intro}>
                         <Typography isNowrap={false}>{label(t, 'panel.intro')}</Typography>
                         <Typography variant="caption" isNowrap={false}>
@@ -289,7 +293,7 @@ export const SharedLinksPanel = () => {
                         </Typography>
                     </span>
                     {content()}
-                </div>
+                </Paper>
             </LayoutContent>
         </div>
     );

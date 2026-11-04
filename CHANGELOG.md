@@ -6,6 +6,15 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- The Shared links panel showed two sets of pagination controls. The table paginates on its own,
+  which the panel now turns off: it keeps its own, because the table's returns to the first page
+  every time a link is revoked.
+- A long content path was cut off in the table rather than wrapping onto a second line.
+- The report sat straight on the page's grey background; it is on a white sheet with a margin
+  around it, like every other screen of its kind.
+
 ## 2.3.1 - 2026-11-04
 
 ### Fixed
