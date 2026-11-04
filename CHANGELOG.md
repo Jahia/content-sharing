@@ -6,6 +6,12 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- A file that Jahia had sized did not load in a review rendering. Its address kept the sizing
+  query, which ended up attached to the signature, so the file was refused. Only files Jahia had
+  not sized were reaching the reviewer; on a real page that was 2 of 41.
+
 ## 2.2.0 - 2026-11-04
 
 ### Added

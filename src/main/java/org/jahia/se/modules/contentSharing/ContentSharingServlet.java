@@ -128,9 +128,15 @@ public class ContentSharingServlet extends HttpServlet {
      */
     private static final String EDIT_FILES_PREFIX = "/files/" + Constants.EDIT_WORKSPACE;
 
-    /** A file URL in a review rendering, up to whatever ends it in markup or in a stylesheet. */
-    private static final Pattern EDIT_FILE_URL =
-            Pattern.compile(Pattern.quote(EDIT_FILES_PREFIX) + "(/[^\"'()\\s?#<>\\\\]+)");
+    /**
+     * A file URL in a review rendering, with the sizing query Jahia may have appended.
+     *
+     * <p>The query is part of the match so that it is consumed: left behind it would follow the
+     * address this is replaced with, where a second {@code ?} is just another character of the
+     * last parameter's value, and the signature would never match.</p>
+     */
+    private static final Pattern EDIT_FILE_URL = Pattern.compile(
+            Pattern.quote(EDIT_FILES_PREFIX) + "(/[^\"'()\\s?#<>\\\\]+)(\\?[^\"'()\\s#<>\\\\]*)?");
 
     /** Shape of a repository path this endpoint will look a file up at. */
     private static final Pattern ASSET_PATH = Pattern.compile("/sites/[A-Za-z0-9._\\-]+/[A-Za-z0-9._\\-/%@ ()+,'\u00c0-\u024f]+");
