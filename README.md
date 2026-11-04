@@ -15,7 +15,7 @@ anything else is rendered as a page.
 
 ## How a contributor uses it
 
-Add the **Share protected content** (`semix:sharedUrl`) mixin to a content node or a file, generate
+Add the **Share protected content** (`cshmix:sharedUrl`) mixin to a content node or a file, generate
 a key, and copy the URL. Set an optional **expiry date** to have the link stop working on its own;
 leave it empty for a link that never expires.
 
@@ -23,7 +23,7 @@ leave it empty for a link that never expires.
 
 | Piece | Role |
 |---|---|
-| `semix:sharedUrl` mixin | Carries `se:sharedUrl` (the secret) and `se:sharedUrlExpiry` (optional). Extends `jnt:content` and `jnt:file`. |
+| `cshmix:sharedUrl` mixin | Carries `cshare:sharedUrl` (the secret) and `cshare:sharedUrlExpiry` (optional). Extends `jnt:content` and `jnt:file`. |
 | `SharedURLGenerator.jsx` | Content Editor selector: generates the key with the browser CSPRNG and builds the URL. |
 | `ContentSharingServlet` | The `/share` alias. Validates the request, resolves the node, then renders or streams it. |
 
@@ -43,7 +43,7 @@ expired link and a real miss all answer the same `404`:
 
 - `t` is resolved through `NodeTypeRegistry` and only the registry's own spelling reaches the query,
   because the `FROM [ … ]` slot has no string escape. The type must also be one the
-  `semix:sharedUrl` mixin applies to.
+  `cshmix:sharedUrl` mixin applies to.
 - `c` must match `[A-Za-z0-9._~-]{8,128}` and is escaped with `JCRContentUtils.sqlEncode`.
 - The resolved node must carry the mixin, its stored key is compared in constant time, and its
   expiry date must not have passed.
@@ -57,10 +57,10 @@ The [selector] reads three options: the key length (`length`, default **24**), t
 
 ```json
 {
-  "name": "semix:sharedUrl",
+  "name": "cshmix:sharedUrl",
   "fields": [
     {
-      "name": "se:sharedUrl",
+      "name": "cshare:sharedUrl",
       "selectorType": "SharedURLGenerator",
       "selectorOptionsMap": {
         "length": 24,
@@ -69,7 +69,7 @@ The [selector] reads three options: the key length (`length`, default **24**), t
       }
     },
     {
-      "name": "se:sharedUrlExpiry"
+      "name": "cshare:sharedUrlExpiry"
     }
   ]
 }
@@ -78,6 +78,14 @@ The [selector] reads three options: the key length (`length`, default **24**), t
 `format` accepts `a` (lowercase), `A` (uppercase), `#` (digits) and `!`, which now adds only the
 URL-safe punctuation `-._~`. The previous `!` set emitted `#`, `?` and `%`; the servlet rejects
 those, so existing keys containing them must be regenerated.
+
+## Upgrading from 1.x
+
+2.0.0 renames the CND namespace, because the old two-letter `se` prefix collides with other
+modules in the `org.jahia.se.modules` family and Jackrabbit will not rebind a prefix. Where that
+collision happens the module installs but is inert, and it blocks node-type registration for
+whatever is deployed after it. See [`UPGRADE.md`](UPGRADE.md) — including how to tell whether you
+have content to migrate.
 
 ## Building
 

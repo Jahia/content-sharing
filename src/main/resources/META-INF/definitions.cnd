@@ -1,10 +1,10 @@
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
-<semix = 'http://modules.se.jahia.org/se/mix/1.0'>
-<se = 'http://modules.se.jahia.org/se/1.0'>
+<cshmix = 'http://modules.jahia.org/content-sharing/mix/1.0'>
+<cshare = 'http://modules.jahia.org/content-sharing/1.0'>
 
-[semix:sharedUrl] mixin
+[cshmix:sharedUrl] mixin
  extends = jnt:content, jnt:file
  itemtype = content
- - se:sharedUrl (string) internationalized nofulltext
- - se:sharedUrlExpiry (date) internationalized nofulltext
+ - cshare:sharedUrl (string) internationalized nofulltext
+ - cshare:sharedUrlExpiry (date) internationalized nofulltext
