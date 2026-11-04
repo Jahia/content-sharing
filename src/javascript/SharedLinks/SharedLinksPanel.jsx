@@ -19,10 +19,27 @@ const PER_PAGE = [10, 25, 50, 100];
 
 const label = (t, key, options) => t(MODULE + ':' + key, options);
 
+/*
+ * Chips and buttons never wrap, so the columns holding them are as wide as their longest label in
+ * the four shipped languages, measured on Moonstone 2.20: "Abgelaufen am 28/11/2026",
+ * "Révoqué, toujours en ligne", "Widerruf veröffentlichen", each plus the cell's 32 px of padding.
+ * The content column, whose text wraps, takes what is left; under the table's minimum width the
+ * table scrolls rather than cutting a label.
+ */
+const EXPIRY_WIDTH = 200;
+const STATE_WIDTH = 192;
+const ACTION_WIDTH = 204;
+const CONTENT_WIDTH = `calc(100% - ${EXPIRY_WIDTH + STATE_WIDTH + ACTION_WIDTH}px)`;
+
 /** When the link stops working, and whether it ever will. */
 const ExpiryCell = ({row, t}) => {
     if (isInert(row)) {
-        return <Chip label={label(t, 'panel.noExpiry')} color="warning"/>;
+        return (
+            <span className={styles.stack}>
+                <Chip label={label(t, 'panel.noExpiry')} color="warning"/>
+                <Typography variant="caption" isNowrap={false}>{label(t, 'panel.noExpiryHint')}</Typography>
+            </span>
+        );
     }
 
     if (!row.expiry) {
@@ -135,39 +152,38 @@ export const SharedLinksPanel = () => {
         {
             key: 'displayName',
             label: label(t, 'panel.column.content'),
-            width: '34%',
+            width: CONTENT_WIDTH,
+            // Which kind of link, in which language: under the path rather than in columns of
+            // their own, which left the content too little room to be read.
             render: ({data}) => (
                 <span className={styles.pathCell}>
                     <Typography isNowrap={false}>{data.displayName}</Typography>
                     <Typography variant="caption" isNowrap={false} className={styles.path}>
                         {data.path}
                     </Typography>
+                    <span className={styles.meta}>
+                        <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>
+                        <Typography variant="caption">{data.language}</Typography>
+                    </span>
                 </span>
             )
         },
         {
-            key: 'kind',
-            label: label(t, 'panel.column.kind'),
-            width: '14%',
-            render: ({data}) => <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>
-        },
-        {key: 'language', label: label(t, 'panel.column.language'), width: '8%'},
-        {
             key: 'expiry',
             label: label(t, 'panel.column.expiry'),
-            width: '16%',
+            width: EXPIRY_WIDTH + 'px',
             render: ({data}) => <ExpiryCell row={data} t={t}/>
         },
         {
             key: 'state',
             label: label(t, 'panel.column.state'),
-            width: '16%',
+            width: STATE_WIDTH + 'px',
             render: ({data}) => <StateCell row={data} t={t}/>
         },
         {
             key: 'id',
             label: label(t, 'panel.column.action'),
-            width: '12%',
+            width: ACTION_WIDTH + 'px',
             render: ({data}) => (state(data) === PENDING_REVOCATION ?
                 <Button
                     size="default"

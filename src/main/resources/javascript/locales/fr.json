@@ -16,7 +16,8 @@
     "notOnSite": "Le module Content Sharing n'est pas activé sur ce site.",
     "error": "Les liens n'ont pas pu être lus.",
     "never": "Sans expiration",
-    "noExpiry": "Sans date d'expiration, ce lien ne fonctionne pas",
+    "noExpiry": "Sans date d'expiration",
+    "noExpiryHint": "Ce lien ne fonctionne pas tant qu'il n'en a pas.",
     "expiredOn": "Expiré le {{date}}",
     "revoke": "Révoquer",
     "publishRevocation": "Publier la révocation",
@@ -28,8 +29,6 @@
     },
     "column": {
       "content": "Contenu",
-      "kind": "Type",
-      "language": "Langue",
       "expiry": "Expiration",
       "state": "État",
       "action": "Action"

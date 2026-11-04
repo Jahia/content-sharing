@@ -56,7 +56,13 @@ module.exports = (env, argv) => {
                     include: [path.join(__dirname, 'src')],
                     use: [
                         'style-loader',
-                        {loader: 'css-loader', options: {modules: {localIdentName: 'cs-[local]-[hash:base64:5]'}}}
+                        // css-loader 7 defaults to named exports, which leaves `import styles from` undefined
+                        // and every `className={styles.x}` silently dropped.
+                        {loader: 'css-loader', options: {modules: {
+                            namedExport: false,
+                            exportLocalsConvention: 'as-is',
+                            localIdentName: 'cs-[local]-[hash:base64:5]'
+                        }}}
                     ]
                 },
                 {

@@ -16,7 +16,8 @@
     "notOnSite": "Das Modul Content Sharing ist auf dieser Website nicht aktiviert.",
     "error": "Die Links konnten nicht gelesen werden.",
     "never": "Ohne Ablauf",
-    "noExpiry": "Ohne Ablaufdatum funktioniert dieser Link nicht",
+    "noExpiry": "Ohne Ablaufdatum",
+    "noExpiryHint": "Ohne Ablaufdatum funktioniert dieser Link nicht.",
     "expiredOn": "Abgelaufen am {{date}}",
     "revoke": "Widerrufen",
     "publishRevocation": "Widerruf veröffentlichen",
@@ -28,8 +29,6 @@
     },
     "column": {
       "content": "Inhalt",
-      "kind": "Art",
-      "language": "Sprache",
       "expiry": "Ablauf",
       "state": "Status",
       "action": "Aktion"

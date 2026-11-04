@@ -16,7 +16,8 @@
     "notOnSite": "El módulo Content Sharing no está activado en este sitio.",
     "error": "No se han podido leer los enlaces.",
     "never": "Sin caducidad",
-    "noExpiry": "Sin fecha de caducidad, este enlace no funciona",
+    "noExpiry": "Sin fecha de caducidad",
+    "noExpiryHint": "Este enlace no funciona hasta que tenga una.",
     "expiredOn": "Caducado el {{date}}",
     "revoke": "Revocar",
     "publishRevocation": "Publicar la revocación",
@@ -28,8 +29,6 @@
     },
     "column": {
       "content": "Contenido",
-      "kind": "Tipo",
-      "language": "Idioma",
       "expiry": "Caducidad",
       "state": "Estado",
       "action": "Acción"
