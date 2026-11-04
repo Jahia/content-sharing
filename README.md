@@ -105,17 +105,49 @@ A package for a release is built by the workflow, never locally: `jahia-maven-pl
 build machine's own path into the manifest of a local build, and the workflow both sets
 `JAHIA_DISABLE_SOURCE_FOLDERS` and refuses a package that carries one or that has no editor field.
 
-## Rendering a shared content item
+## What can be shared
 
-A shared **file** is served as a download and needs nothing from the site. A shared **page** is
-rendered by its own template.
+The mixin applies to **content items** (`jnt:content`), **files** (`jnt:file`) and **pages**
+(`jnt:page`).
 
-A shared **content item** is rendered in a page context, so the site's template set has to offer a
-template that applies to it, as it does for any content item reachable by its own URL
-(`jmix:mainResource`). A site whose template set offers none renders nothing for such a link, and
-the endpoint reports the failure. This module ships no template of its own: it does not know what a
-shared item should look like on your site, and a template that applies to everything would override
-the site's own.
+A shared **file** is served as a download and needs nothing from the site. A shared **page**
+renders through its own template. A shared **content item** is rendered in a page context, so the
+site's template set has to offer a template that applies to it, as it does for any content item
+reachable by its own URL (`jmix:mainResource`). A site whose template set offers none renders
+nothing for such a link, and the endpoint reports the failure. This module ships no template of its
+own: it does not know what a shared item should look like on your site, and a template that applied
+to everything would take over ordinary rendering too.
+
+## Navigation in a shared page
+
+A shared page renders with the site's chrome, and a visitor holding one link can open nothing the
+navigation points at. The module cannot leave that chrome out on its own, for the reason above, so
+by default it puts a short notice at the top of the rendering:
+
+> You are viewing shared content. Links on this page lead to pages you may not be able to open.
+
+The text comes from the module's resource bundle (`sharedLink.notice`), in the visitor's language,
+and is escaped before it is inserted. If the markup has no `body` element the page is served
+untouched.
+
+**To render a shared page differently**, branch on the request attribute the servlet sets before
+rendering:
+
+```jsp
+<c:if test="${not empty requestScope['contentSharing.sharedRendering']}">
+  ...render without the header and footer, or with your own notice...
+  <c:set var="x" value="${requestScope['contentSharing.noticeRendered'] = true}"/>
+</c:if>
+```
+
+| attribute | meaning |
+|---|---|
+| `contentSharing.sharedRendering` | set by this module before it renders a shared node |
+| `contentSharing.noticeRendered` | set it to `true` and the default notice is left out |
+
+Leaving the chrome out gives a cleaner read; keeping it keeps the site's branding on a page a
+stranger is looking at. That is a decision for the site, which is why the module makes it possible
+rather than making it for you.
 
 ## Known limitations
 

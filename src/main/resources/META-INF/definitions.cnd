@@ -4,7 +4,7 @@
 <cshare = 'http://modules.jahia.org/content-sharing/1.0'>
 
 [cshmix:sharedUrl] mixin
- extends = jnt:content, jnt:file
+ extends = jnt:content, jnt:file, jnt:page
  itemtype = content
  - cshare:sharedUrl (string) internationalized nofulltext
  - cshare:sharedUrlExpiry (date) internationalized nofulltext

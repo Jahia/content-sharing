@@ -44,7 +44,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -92,6 +95,21 @@ public class ContentSharingServlet extends HttpServlet {
     private static final String SHARED_MIXIN = "cshmix:sharedUrl";
 
     /**
+     * Set on the request before a shared node is rendered, so a template can tell this rendering
+     * apart from an ordinary one and leave out what a visitor holding only this link cannot use.
+     * Documented in the README; nothing in the platform sets it.
+     */
+    private static final String SHARED_RENDERING_ATTRIBUTE = "contentSharing.sharedRendering";
+
+    /**
+     * A template that renders its own notice sets this, and the default notice is left out.
+     */
+    private static final String NOTICE_RENDERED_ATTRIBUTE = "contentSharing.noticeRendered";
+
+    /** Resource bundle holding the visitor-facing strings. */
+    private static final String BUNDLE = "resources.content-sharing";
+
+    /**
      * Accepted shape of a sharing key: the URL-safe alphabet the generator emits. A key that
      * predates the alphabet change no longer matches and has to be regenerated.
      */
@@ -111,6 +129,9 @@ public class ContentSharingServlet extends HttpServlet {
      * rather than served, because {@code l} reaching the render chain is the whole problem.
      */
     private static final String LEGACY_LANG_PARAM = "l";
+
+    /** Opening {@code body} tag, however it is spelled and whatever attributes it carries. */
+    private static final Pattern BODY_TAG = Pattern.compile("<body\\b[^>]*>", Pattern.CASE_INSENSITIVE);
 
     /** BCP 47 shape, e.g. {@code en}, {@code fr-CA}. Anything else falls back to the default. */
     private static final Pattern LANGUAGE_PATTERN = Pattern.compile("[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*");
@@ -409,6 +430,11 @@ public class ContentSharingServlet extends HttpServlet {
         renderContext.setEditMode(false);
         renderContext.setURLGenerator(new URLGenerator(renderContext, resource));
 
+        // Lets the site's own template recognise a shared rendering. A page renders with its
+        // chrome, and a visitor holding one link cannot follow the navigation in it, so a site
+        // that wants to leave that chrome out branches on this.
+        request.setAttribute(SHARED_RENDERING_ATTRIBUTE, Boolean.TRUE);
+
         String markup;
         try {
             markup = renderService.render(resource, renderContext);
@@ -418,8 +444,55 @@ public class ContentSharingServlet extends HttpServlet {
             return;
         }
 
+        if (!Boolean.TRUE.equals(request.getAttribute(NOTICE_RENDERED_ATTRIBUTE))) {
+            markup = withSharedLinkNotice(markup, renderContext.getMainResourceLocale());
+        }
+
         response.setContentType("text/html; charset=UTF-8");
         response.getWriter().write(markup);
+    }
+
+    /**
+     * Puts a short notice at the top of a shared rendering.
+     *
+     * <p>A shared page renders through the site's own template, navigation included, and a visitor
+     * holding one link can open nothing else it points at. The module cannot leave that chrome out
+     * on its own -- the template owns it, and a template of ours applying to every page would take
+     * over ordinary rendering too -- so the default is to say so rather than to let the visitor
+     * discover it by clicking. A site that would rather render a shared page without its chrome
+     * branches on {@value #SHARED_RENDERING_ATTRIBUTE} and sets
+     * {@value #NOTICE_RENDERED_ATTRIBUTE}.</p>
+     *
+     * <p>Styling is inline because the notice must read the same on a site whose stylesheet it has
+     * never seen. If the markup has no {@code body} element the page is returned untouched: a
+     * missing notice is a smaller problem than a broken page.</p>
+     */
+    static String withSharedLinkNotice(String markup, Locale locale) {
+        Matcher body = BODY_TAG.matcher(markup);
+        if (!body.find()) {
+            return markup;
+        }
+
+        String text;
+        try {
+            text = ResourceBundle.getBundle(BUNDLE, locale).getString("sharedLink.notice");
+        } catch (MissingResourceException e) {
+            LOGGER.warn("No sharedLink.notice string for {}", locale, e);
+            return markup;
+        }
+
+        String notice = "<div role=\"status\" style=\"padding:12px 16px;margin:0;"
+                + "font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;"
+                + "color:#2b2f33;background:#fff6e0;border-bottom:1px solid #e8c97a;"
+                + "text-align:center\">" + escapeHtml(text) + "</div>";
+
+        return markup.substring(0, body.end()) + notice + markup.substring(body.end());
+    }
+
+    /** Escapes the five characters that matter in HTML text. */
+    static String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     /**
