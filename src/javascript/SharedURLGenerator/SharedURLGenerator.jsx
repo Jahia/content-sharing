@@ -1,30 +1,9 @@
 import React, {useEffect} from 'react';
 import * as PropTypes from 'prop-types';
 import {useTranslation} from 'react-i18next';
-import {withStyles} from '@material-ui/core';
 import {Button, Reload, Copy, Typography} from '@jahia/moonstone';
 
-const styles = theme => ({
-    syncButton: {
-        marginTop: 'var(--spacing-medium)'
-    },
-    copyButton: {
-        marginLeft: 'var(--spacing-small)'
-    },
-    fieldSetDescription: {
-        overflowWrap: 'anywhere',
-        marginTop: 'var(--spacing-nano)',
-        color: 'var(--color-dark60)',
-        backgroundColor: theme.palette.ui.epsilon,
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        border: '1px rgba(218, 218, 218, 0.4) solid',
-        borderRadius: '2px',
-        padding: '6px'
-    }
-});
+import styles from './SharedURLGenerator.module.css';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -94,7 +73,7 @@ const getURL = ({key, nodeTypeName, lang, origin}) => {
     return url.toString();
 };
 
-const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext}) => {
+const SharedURLGeneratorCMP = ({field, value, onChange, editorContext}) => {
     const length = field.selectorOptions.find(option => option.name === 'length')?.value || 24;
     const format = field.selectorOptions.find(option => option.name === 'format')?.value || 'aA#';
     const origin = field.selectorOptions.find(option => option.name === 'origin')?.value || window.location.origin;
@@ -121,11 +100,11 @@ const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext})
     return (
         <>
             <Typography component="div"
-                        className={classes.fieldSetDescription}
+                        className={styles.urlBox}
             >
                 {url || t('label.url.generateKey')}
             </Typography>
-            <Button className={classes.syncButton}
+            <Button className={styles.generateButton}
                     data-sel-role="generateSharedUrl"
                     variant="outlined"
                     size="big"
@@ -134,7 +113,7 @@ const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext})
                     icon={<Reload/>}
                     onClick={handleNewKey}
             />
-            <Button className={classes.copyButton}
+            <Button className={styles.copyButton}
                     data-sel-role="copySharedUrl"
                     variant="outlined"
                     size="big"
@@ -149,12 +128,11 @@ const SharedURLGeneratorCMP = ({classes, field, value, onChange, editorContext})
 };
 
 SharedURLGeneratorCMP.propTypes = {
-    classes: PropTypes.object.isRequired,
     field: PropTypes.object,
     value: PropTypes.string,
     onChange: PropTypes.func.isRequired,
     editorContext: PropTypes.object.isRequired
 };
 
-export const SharedURLGenerator = withStyles(styles)(SharedURLGeneratorCMP);
+export const SharedURLGenerator = SharedURLGeneratorCMP;
 SharedURLGenerator.displayName = 'SharedURLGenerator';

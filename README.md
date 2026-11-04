@@ -81,14 +81,21 @@ those, so existing keys containing them must be regenerated.
 
 ## Building
 
-Requires JDK 17 and Node 22 (both pinned in the build).
+Requires JDK 17 and Node 22, both pinned in the build.
 
 ```bash
 mvn clean install
 ```
 
-The front-end is built by `frontend-maven-plugin` during `generate-resources`; `yarn.lock` is
-committed, so a build resolves the same tree every time.
+The front-end is built by `frontend-maven-plugin` during `generate-resources`. `yarn.lock` is
+committed, so a build resolves the same tree every time, and the generated front-end under
+`src/main/resources/javascript/apps/` is committed too, so a package always carries the editor
+field even when a build skips the yarn step. The editor field uses Moonstone and the React runtime
+jContent provides; the module declares no Material UI dependency.
+
+A package for a release is built by the workflow, never locally: `jahia-maven-plugin` writes the
+build machine's own path into the manifest of a local build, and the workflow both sets
+`JAHIA_DISABLE_SOURCE_FOLDERS` and refuses a package that carries one or that has no editor field.
 
 ## Known limitations
 

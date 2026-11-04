@@ -10,6 +10,9 @@ on:
   push:
     branches:
       - main
+  # Lets a release be cut from a tag: the jar that ships must be a CI build, because
+  # jahia-maven-plugin writes the local build path into the manifest of a developer's build.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -31,7 +34,36 @@ jobs:
         with:
           node-version: '22'
       - name: Build
+        env:
+          JAHIA_DISABLE_SOURCE_FOLDERS: "true"
         run: mvn --batch-mode --no-transfer-progress install
+
+      # A jar carrying Jahia-Source-Folders is a developer's build and must never be released.
+      - name: Refuse a jar that carries a build path
+        run: |
+          JAR=$(ls target/*.jar | grep -v sources | head -1)
+          echo "checking $JAR"
+          if unzip -p "$JAR" META-INF/MANIFEST.MF | tr -d '\r' | grep -q 'Jahia-Source-Folders'; then
+            unzip -p "$JAR" META-INF/MANIFEST.MF | tr -d '\r' | grep 'Jahia-Source-Folders'
+            echo "::error::the manifest carries a build path; this jar cannot be released"
+            exit 1
+          fi
+          echo "no Jahia-Source-Folders in the manifest"
+
+      - name: Refuse a jar with no front-end
+        run: |
+          JAR=$(ls target/*.jar | grep -v sources | head -1)
+          if ! unzip -l "$JAR" | grep -q 'javascript/apps/remoteEntry.js'; then
+            echo "::error::the jar has no javascript/apps/remoteEntry.js, so the editor field would not load"
+            exit 1
+          fi
+          echo "remoteEntry.js is in the jar"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: module-jar
+          path: target/*.jar
+          retention-days: 30
 
   javascript:
     name: Lint and audit the front-end

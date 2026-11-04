@@ -18,4 +18,11 @@ repository.xml.generated
 node_modules
 node
 yarn-error.log
-src/main/resources/javascript/apps
+
+# macOS / editors
+.DS_Store
+.vscode/
+
+# Generated source maps: the front-end itself is committed (so a package always carries the
+# editor field), its maps are rebuilt by every build and only add noise to the history.
+src/main/resources/javascript/apps/*.map

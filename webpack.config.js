@@ -52,7 +52,16 @@ module.exports = (env, argv) => {
                     }
                 },
                 {
+                    test: /\.module\.css$/,
+                    include: [path.join(__dirname, 'src')],
+                    use: [
+                        'style-loader',
+                        {loader: 'css-loader', options: {modules: {localIdentName: 'cs-[local]-[hash:base64:5]'}}}
+                    ]
+                },
+                {
                     test: /\.css$/,
+                    exclude: /\.module\.css$/,
                     include: [path.join(__dirname, 'src')],
                     use: ['style-loader', 'css-loader']
                 },

@@ -52,7 +52,7 @@
     <parent>
         <artifactId>jahia-modules</artifactId>
         <groupId>org.jahia.modules</groupId>
-        <version>8.2.3.2</version>
+        <version>8.2.0.0</version>
     </parent>
     <groupId>org.jahia.se.modules</groupId>
     <artifactId>content-sharing</artifactId>
@@ -86,6 +86,15 @@
         </repository>
     </repositories>
 
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -98,20 +107,10 @@
                     </instructions>
                 </configuration>
             </plugin>
-            <plugin>
-                <artifactId>maven-clean-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>src/main/resources/javascript/apps</directory>
-                            <includes>
-                                <include>*</include>
-                            </includes>
-                        </fileset>
-                    </filesets>
-                </configuration>
-            </plugin>
+            <!-- No maven-clean fileset over src/main/resources/javascript/apps: that output is
+                 committed, so `mvn clean` would delete tracked files and a build that skips the
+                 yarn step would then package a module with no front-end. CleanWebpackPlugin
+                 already empties the directory before each webpack build. -->
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
