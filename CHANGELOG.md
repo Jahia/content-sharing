@@ -6,6 +6,18 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- **The Shared links panel listed nothing.** It read each link's key from the node's
+  `jnt:translation` children, which is how an internationalized value can be read in every language
+  in one request. On Jahia 8.2.3.2 with jContent 3.8.1 that child list comes back empty through
+  GraphQL, with no error, so every link was found and then dropped. Each key is now read with an
+  explicit language, one aliased field per language of the site, which depends on no session state.
+
+- The panel no longer reads through the shared Apollo cache. The same content comes back under both
+  workspaces with one identifier, so a cache keyed on it let the live answer overwrite the
+  authoring one. A report also has no business showing a value the server did not just send.
+
 ## 2.3.0 - 2026-11-04
 
 ### Added
