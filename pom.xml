@@ -84,7 +84,48 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>jahia-releases-archives</id>
+            <name>Jahia Releases Archive</name>
+            <url>https://archives-devtools.jahia.com/jahia-releases</url>
+            <releases><enabled>true</enabled><updatePolicy>never</updatePolicy></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>jahia-thirdparty-archives</id>
+            <name>Jahia Third-Party Releases Archive</name>
+            <url>https://archives-devtools.jahia.com/thirdparty-releases</url>
+            <releases><enabled>true</enabled><updatePolicy>never</updatePolicy></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
     </repositories>
+
+    <!-- jahia-maven-plugin depends on jahia-commons, and Maven resolves a plugin's dependencies
+         from the plugin repositories only: without this list native2ascii fails to resolve even
+         though the same artifacts resolve for the project. -->
+    <pluginRepositories>
+        <pluginRepository>
+            <id>jahia-public</id>
+            <name>Jahia Public Repository</name>
+            <url>https://devtools.jahia.com/nexus/content/groups/public</url>
+            <releases><enabled>true</enabled><updatePolicy>never</updatePolicy></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>jahia-releases-archives</id>
+            <name>Jahia Releases Archive</name>
+            <url>https://archives-devtools.jahia.com/jahia-releases</url>
+            <releases><enabled>true</enabled><updatePolicy>never</updatePolicy></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>jahia-thirdparty-archives</id>
+            <name>Jahia Third-Party Releases Archive</name>
+            <url>https://archives-devtools.jahia.com/thirdparty-releases</url>
+            <releases><enabled>true</enabled><updatePolicy>never</updatePolicy></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencies>
         <dependency>
