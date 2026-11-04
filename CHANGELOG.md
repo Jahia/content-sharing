@@ -6,6 +6,15 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **A page can be shared.** The mixin now applies to `jnt:page` as well as to content items and
+  files, so a contributor can put a sharing link on a page.
+- A shared page renders with the site's chrome, and a visitor holding one link can open nothing the
+  navigation points at, so the rendering carries a short notice saying so, in the visitor's
+  language. A site that would rather render a shared page without its header and footer, or show
+  its own notice, branches on the request attributes documented in the README.
+
 ## 2.0.0 - 2026-11-04
 
 ### Breaking
