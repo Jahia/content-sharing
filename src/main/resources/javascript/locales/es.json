@@ -16,13 +16,13 @@
     "notOnSite": "El módulo Content Sharing no está activado en este sitio.",
     "error": "No se han podido leer los enlaces.",
     "never": "Sin caducidad",
-    "noExpiry": "Sin fecha de caducidad",
-    "noExpiryHint": "Este enlace no funciona hasta que tenga una.",
-    "expiredOn": "Caducado el {{date}}",
+    "noExpiry": "Falta",
+    "noExpiryHint": "Sin fecha de caducidad, este enlace no funciona.",
+    "expired": "Caducado",
     "revoke": "Revocar",
     "copyLink": "Copiar enlace",
     "copied": "Copiado",
-    "publishRevocation": "Publicar la revocación",
+    "publishRevocation": "Publicar",
     "exportCsv": "Exportar CSV",
     "exportJson": "Exportar JSON",
     "kind": {
@@ -31,6 +31,8 @@
     },
     "column": {
       "content": "Contenido",
+      "kind": "Tipo",
+      "language": "Idioma",
       "expiry": "Caducidad",
       "state": "Estado",
       "action": "Acción"

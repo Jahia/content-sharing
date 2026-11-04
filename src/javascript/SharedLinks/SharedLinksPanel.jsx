@@ -22,15 +22,26 @@ const label = (t, key, options) => t(MODULE + ':' + key, options);
 
 /*
  * Chips and buttons never wrap, so the columns holding them are as wide as their longest label in
- * the four shipped languages, measured on Moonstone 2.20: "Abgelaufen am 28/11/2026",
- * "Révoqué, toujours en ligne", "Widerruf veröffentlichen", each plus the cell's 32 px of padding.
- * The content column, whose text wraps, takes what is left; under the table's minimum width the
- * table scrolls rather than cutting a label.
+ * the four shipped languages, measured on Moonstone 2.20 plus the cell's 32 px of padding. Labels
+ * are kept short for it: a date or an explanation goes under its chip, where it can wrap. The
+ * content column, whose text wraps, takes what is left; under the table's minimum width the table
+ * scrolls rather than cutting a label.
  */
-const EXPIRY_WIDTH = 200;
+const KIND_WIDTH = 160;
+const LANGUAGE_WIDTH = 96;
+const EXPIRY_WIDTH = 136;
 const STATE_WIDTH = 192;
-const ACTION_WIDTH = 204;
-const CONTENT_WIDTH = `calc(100% - ${EXPIRY_WIDTH + STATE_WIDTH + ACTION_WIDTH}px)`;
+const ACTION_WIDTH = 160;
+const CONTENT_WIDTH = `calc(100% - ${KIND_WIDTH + LANGUAGE_WIDTH + EXPIRY_WIDTH + STATE_WIDTH + ACTION_WIDTH}px)`;
+
+/** A path that wraps after a slash, never inside a node name. */
+const BreakablePath = ({path}) => path.split('/').map((part, index) => (
+    // eslint-disable-next-line react/no-array-index-key -- segments repeat; their order is the key
+    <React.Fragment key={index}>{index > 0 && <>/<wbr/></>}{part}</React.Fragment>
+));
+
+/** A row's sub-row: the address its link opens, shown when the row is expanded. */
+const LINK_SUFFIX = '\u0000link';
 
 /** When the link stops working, and whether it ever will. */
 const ExpiryCell = ({row, t}) => {
@@ -48,9 +59,12 @@ const ExpiryCell = ({row, t}) => {
     }
 
     const on = new Date(row.expiry).toLocaleDateString();
-    return isExpired(row) ?
-        <Chip label={label(t, 'panel.expiredOn', {date: on})} color="danger"/> :
-        <Typography variant="caption">{on}</Typography>;
+    return isExpired(row) ? (
+        <span className={styles.stack}>
+            <Chip label={label(t, 'panel.expired')} color="danger"/>
+            <Typography variant="caption">{on}</Typography>
+        </span>
+    ) : <Typography variant="caption">{on}</Typography>;
 };
 
 /**
@@ -83,6 +97,7 @@ export const SharedLinksPanel = () => {
 
     const [busy, setBusy] = useState(null);
     const [copied, setCopied] = useState(null);
+    const [expanded, setExpanded] = useState([]);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(PER_PAGE[1]);
 
@@ -128,8 +143,28 @@ export const SharedLinksPanel = () => {
         return () => clearTimeout(timer);
     }, [copied]);
 
+    // Moonstone opens a row on a click only: the row takes focus but ignores Enter and Space, and
+    // says nothing of its state. Without this the link stays out of reach from the keyboard.
+    const rowProps = useCallback(({id, data, meta}) => {
+        if (!data.subRows || data.subRows.length === 0) {
+            return {};
+        }
+
+        return {
+            'aria-expanded': meta.isExpanded,
+            onKeyDown: event => {
+                if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) {
+                    return;
+                }
+
+                event.preventDefault();
+                setExpanded(open => (open.includes(id) ? open.filter(other => other !== id) : [...open, id]));
+            }
+        };
+    }, []);
+
     const onCopy = useCallback(row => {
-        navigator.clipboard.writeText(row.url).then(() => setCopied(row.id));
+        navigator.clipboard.writeText(row.url).then(() => setCopied(row.rowId));
     }, []);
 
     // Revoking shortens the list; without this the panel can sit on a page that no longer exists.
@@ -140,8 +175,12 @@ export const SharedLinksPanel = () => {
         }
     }, [rows.length, perPage, page]);
 
+    // Each row carries its address as a sub-row, which the table shows when the row is expanded.
     const shown = useMemo(
-        () => rows.slice((page - 1) * perPage, page * perPage),
+        () => rows.slice((page - 1) * perPage, page * perPage).map(row => ({
+            ...row,
+            subRows: row.url ? [{id: row.id + LINK_SUFFIX, isLink: true, url: row.url, rowId: row.id}] : []
+        })),
         [rows, page, perPage]
     );
 
@@ -168,57 +207,65 @@ export const SharedLinksPanel = () => {
     const installed = siteNode && siteNode.installed;
     const enabled = Boolean(installed && installed.values && installed.values.indexOf(MODULE) !== -1);
 
+    // A link sub-row fills the content cell only; CSS spreads that cell over the whole row.
+    const parentOnly = render => props => (props.data.isLink ? null : render(props));
+
     const columns = useMemo(() => [
         {
             key: 'displayName',
             label: label(t, 'panel.column.content'),
             width: CONTENT_WIDTH,
-            // Which kind of link, in which language: under the path rather than in columns of
-            // their own, which left the content too little room to be read.
-            render: ({data}) => (
+            render: ({data}) => (data.isLink ? (
+                <span className={styles.linkLine}>
+                    <Typography variant="caption" isNowrap={false} className={styles.link}>
+                        {data.url}
+                    </Typography>
+                    <Button
+                        size="small"
+                        variant="ghost"
+                        icon={<Copy/>}
+                        label={label(t, copied === data.rowId ? 'panel.copied' : 'panel.copyLink')}
+                        onClick={() => onCopy(data)}
+                    />
+                </span>
+            ) : (
                 <span className={styles.pathCell}>
                     <Typography isNowrap={false}>{data.displayName}</Typography>
                     <Typography variant="caption" isNowrap={false} className={styles.path}>
-                        {data.path}
+                        <BreakablePath path={data.path}/>
                     </Typography>
-                    <span className={styles.meta}>
-                        <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>
-                        <Typography variant="caption">{data.language}</Typography>
-                    </span>
-                    {data.url && (
-                        <span className={styles.linkLine}>
-                            <Typography variant="caption" isNowrap={false} className={styles.link}>
-                                {data.url}
-                            </Typography>
-                            <Button
-                                size="small"
-                                variant="ghost"
-                                icon={<Copy/>}
-                                label={label(t, copied === data.id ? 'panel.copied' : 'panel.copyLink')}
-                                onClick={() => onCopy(data)}
-                            />
-                        </span>
-                    )}
                 </span>
-            )
+            ))
+        },
+        {
+            key: 'kind',
+            label: label(t, 'panel.column.kind'),
+            width: KIND_WIDTH + 'px',
+            render: parentOnly(({data}) => <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>)
+        },
+        {
+            key: 'language',
+            label: label(t, 'panel.column.language'),
+            width: LANGUAGE_WIDTH + 'px',
+            render: parentOnly(({data}) => <Typography variant="caption">{data.language}</Typography>)
         },
         {
             key: 'expiry',
             label: label(t, 'panel.column.expiry'),
             width: EXPIRY_WIDTH + 'px',
-            render: ({data}) => <ExpiryCell row={data} t={t}/>
+            render: parentOnly(({data}) => <ExpiryCell row={data} t={t}/>)
         },
         {
             key: 'state',
             label: label(t, 'panel.column.state'),
             width: STATE_WIDTH + 'px',
-            render: ({data}) => <StateCell row={data} t={t}/>
+            render: parentOnly(({data}) => <StateCell row={data} t={t}/>)
         },
         {
             key: 'id',
             label: label(t, 'panel.column.action'),
             width: ACTION_WIDTH + 'px',
-            render: ({data}) => (state(data) === PENDING_REVOCATION ?
+            render: parentOnly(({data}) => (state(data) === PENDING_REVOCATION ?
                 <Button
                     size="default"
                     color="danger"
@@ -234,7 +281,7 @@ export const SharedLinksPanel = () => {
                     label={label(t, 'panel.revoke')}
                     isDisabled={busy !== null}
                     onClick={() => onRevoke(data)}
-                />)
+                />))
         }
     ], [t, busy, copied, onCopy, onPublish, onRevoke]);
 
@@ -259,6 +306,10 @@ export const SharedLinksPanel = () => {
             <>
                 <div className={styles.tableBox}>
                     <DataTable
+                        // Each row expands to its link. Controlled, so every row starts closed
+                        // (Moonstone 2.20 opens them all) and stays as the editor left it when a
+                        // revocation reloads the list.
+                        isStructured
                         primaryKey="id"
                         data={shown}
                         columns={columns}
@@ -266,7 +317,10 @@ export const SharedLinksPanel = () => {
                         // installed typings say. Its pagination also returns to page 1 every time
                         // the data changes, which revoking does, so the panel keeps its own.
                         enablePagination={false}
+                        expandedRows={expanded}
+                        rowProps={rowProps}
                         data-cs-role="links-table"
+                        onExpandChange={setExpanded}
                     />
                 </div>
                 <div className={styles.paginationBox}>
