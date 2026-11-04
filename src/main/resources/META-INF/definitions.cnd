@@ -3,8 +3,18 @@
 <cshmix = 'http://modules.jahia.org/content-sharing/mix/1.0'>
 <cshare = 'http://modules.jahia.org/content-sharing/1.0'>
 
+// Published content, handed to someone without an account.
 [cshmix:sharedUrl] mixin
  extends = jnt:content, jnt:file, jnt:page
  itemtype = content
  - cshare:sharedUrl (string) internationalized nofulltext
  - cshare:sharedUrlExpiry (date) internationalized nofulltext
+
+// Content as it stands in the authoring workspace, handed to a reviewer without an account.
+// A separate mixin, not a second field on the one above: it reaches content nobody has approved
+// yet, so whether a node can be shared that way is its own decision.
+[cshmix:reviewUrl] mixin
+ extends = jnt:content, jnt:file, jnt:page
+ itemtype = content
+ - cshare:reviewUrl (string) internationalized nofulltext
+ - cshare:reviewUrlExpiry (date) internationalized nofulltext

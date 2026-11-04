@@ -6,6 +6,25 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **A second kind of link, for review before publication.** `cshmix:reviewUrl` carries its own key
+  and its own expiry date, and serves the content as it stands in the authoring workspace rather
+  than the published version. It lets someone outside the site read a draft without an account and
+  without the content being published first.
+
+  A node can carry both kinds at once, with different keys and different expiry dates. Which one a
+  request is depends on the key alone, because the two keys live in different properties: holding a
+  link to published content does not let anyone ask for the unpublished version of it.
+
+  **A review link must carry an expiry date**; one without is refused. Reviewers are outside the
+  site, so the link has to stop on its own.
+
+  A review link renders the page from the authoring workspace, so it shows everything on that page
+  that is not published yet, including other people's work in progress. Reviewers see a notice
+  saying so. It is a separate mixin rather than a field on the first one so that a site can decide
+  separately where review sharing is allowed.
+
 ## 2.1.0 - 2026-11-04
 
 ### Added

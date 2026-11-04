@@ -94,6 +94,11 @@ public class ContentSharingServlet extends HttpServlet {
     /** Only a type carrying this mixin may be addressed, whatever {@code t} claims. */
     private static final String SHARED_MIXIN = "cshmix:sharedUrl";
 
+    /** The review link's mixin, property and expiry. Reaches the authoring workspace. */
+    private static final String REVIEW_MIXIN = "cshmix:reviewUrl";
+    private static final String REVIEW_KEY_PROPS = "cshare:reviewUrl";
+    private static final String REVIEW_EXPIRY_PROPS = "cshare:reviewUrlExpiry";
+
     /**
      * Set on the request before a shared node is rendered, so a template can tell this rendering
      * apart from an ordinary one and leave out what a visitor holding only this link cannot use.
@@ -108,6 +113,43 @@ public class ContentSharingServlet extends HttpServlet {
 
     /** Resource bundle holding the visitor-facing strings. */
     private static final String BUNDLE = "resources.content-sharing";
+
+    /**
+     * The two kinds of link this endpoint serves, each pinned to one workspace.
+     *
+     * <p>The workspace is a property of the kind, never of the request: were it a parameter,
+     * anyone holding a link to published content could ask for the same node as it stands in the
+     * authoring workspace, which is not what the contributor handed out.</p>
+     *
+     * <p>They are told apart by the property the key is stored in, so a key is only ever one kind
+     * and no request can be read as both.</p>
+     */
+    private enum LinkKind {
+        /** Published content, as a visitor of the site would see it. */
+        PUBLISHED(SHARED_MIXIN, KEY_PROPS, EXPIRY_PROPS, Constants.LIVE_WORKSPACE,
+                "sharedLink.notice", false),
+        /** Content as it stands in the authoring workspace, for review before publication. */
+        REVIEW(REVIEW_MIXIN, REVIEW_KEY_PROPS, REVIEW_EXPIRY_PROPS, Constants.EDIT_WORKSPACE,
+                "reviewLink.notice", true);
+
+        private final String mixin;
+        private final String keyProperty;
+        private final String expiryProperty;
+        private final String workspace;
+        private final String noticeKey;
+        /** A link into the authoring workspace that never expires is one nobody can withdraw. */
+        private final boolean expiryRequired;
+
+        LinkKind(String mixin, String keyProperty, String expiryProperty, String workspace,
+                String noticeKey, boolean expiryRequired) {
+            this.mixin = mixin;
+            this.keyProperty = keyProperty;
+            this.expiryProperty = expiryProperty;
+            this.workspace = workspace;
+            this.noticeKey = noticeKey;
+            this.expiryRequired = expiryRequired;
+        }
+    }
 
     /**
      * Accepted shape of a sharing key: the URL-safe alphabet the generator emits. A key that
@@ -187,32 +229,53 @@ public class ContentSharingServlet extends HttpServlet {
             return;
         }
 
-        try {
-            // Everything that touches the node stays INSIDE the callback. JCRTemplate logs the
-            // session out as soon as the callback returns, and a JCRNodeWrapper handed out past
-            // that point throws "This session has been closed" on first use.
-            jcrTemplate.doExecuteWithSystemSessionAsUser(null, Constants.LIVE_WORKSPACE, locale,
-                    session -> {
-                        JCRNodeWrapper node = findSharedNode(session, canonicalType, contentKey);
-                        try {
-                            if (node == null) {
-                                sendNotFound(response);
-                            } else if (node.isNodeType(Constants.JAHIANT_FILE)) {
-                                streamFile(node, response);
-                            } else {
-                                renderContent(node, request, response);
-                            }
-                        } catch (IOException e) {
-                            throw new ServeFailure(e);
-                        }
-                        return null;
-                    });
-        } catch (ServeFailure e) {
-            throw e.getCause();
-        } catch (RepositoryException e) {
-            LOGGER.error("Unable to serve shared content of type {}", canonicalType, e);
-            sendServerError(response);
+        // Each kind is looked up in its own workspace. A key lives in one property or the other,
+        // so a request can only ever match one of them.
+        for (LinkKind kind : LinkKind.values()) {
+            try {
+                if (Boolean.TRUE.equals(serve(kind, canonicalType, contentKey, locale, request, response))) {
+                    return;
+                }
+            } catch (ServeFailure e) {
+                throw e.getCause();
+            } catch (RepositoryException e) {
+                LOGGER.error("Unable to serve a {} link of type {}", kind, canonicalType, e);
+                sendServerError(response);
+                return;
+            }
         }
+
+        sendNotFound(response);
+    }
+
+    /**
+     * Looks the key up as a link of {@code kind} and serves the node if it matches.
+     *
+     * <p>Everything that touches the node stays INSIDE the callback. JCRTemplate logs the session
+     * out as soon as the callback returns, and a JCRNodeWrapper handed out past that point throws
+     * "This session has been closed" on first use.</p>
+     *
+     * @return {@code true} when this kind matched and the response was written
+     */
+    private Boolean serve(LinkKind kind, String canonicalType, String contentKey, Locale locale,
+            HttpServletRequest request, HttpServletResponse response) throws RepositoryException {
+        return jcrTemplate.doExecuteWithSystemSessionAsUser(null, kind.workspace, locale,
+                session -> {
+                    JCRNodeWrapper node = findSharedNode(session, kind, canonicalType, contentKey);
+                    if (node == null) {
+                        return Boolean.FALSE;
+                    }
+                    try {
+                        if (node.isNodeType(Constants.JAHIANT_FILE)) {
+                            streamFile(node, response);
+                        } else {
+                            renderContent(node, kind, request, response);
+                        }
+                    } catch (IOException e) {
+                        throw new ServeFailure(e);
+                    }
+                    return Boolean.TRUE;
+                });
     }
 
     /** Carries an {@link IOException} out of a {@link JCRCallback}, which may only throw {@link RepositoryException}. */
@@ -236,7 +299,8 @@ public class ContentSharingServlet extends HttpServlet {
     }
 
     /**
-     * Resolves the single node of {@code canonicalType} whose sharing key matches, or {@code null}.
+     * Resolves the single node of {@code canonicalType} whose key of this {@code kind} matches,
+     * or {@code null}.
      *
      * <p>Takes the live session rather than opening its own, so the returned node stays valid for
      * as long as the caller's callback runs.</p>
@@ -244,10 +308,10 @@ public class ContentSharingServlet extends HttpServlet {
      * @param canonicalType a name {@link NodeTypeRegistry} produced, safe for the identifier slot
      * @param contentKey    a key that matched {@link #KEY_PATTERN}, escaped again here for the literal slot
      */
-    private JCRNodeWrapper findSharedNode(JCRSessionWrapper session, String canonicalType, String contentKey)
-            throws RepositoryException {
+    private JCRNodeWrapper findSharedNode(JCRSessionWrapper session, LinkKind kind,
+            String canonicalType, String contentKey) throws RepositoryException {
         String statement = "SELECT * FROM [" + canonicalType + "] AS node"
-                + " WHERE node.[" + KEY_PROPS + "] = '" + JCRContentUtils.sqlEncode(contentKey) + "'";
+                + " WHERE node.[" + kind.keyProperty + "] = '" + JCRContentUtils.sqlEncode(contentKey) + "'";
 
         JCRNodeIteratorWrapper nodes = session.getWorkspace().getQueryManager()
                 .createQuery(statement, Query.JCR_SQL2)
@@ -256,16 +320,23 @@ public class ContentSharingServlet extends HttpServlet {
 
         while (nodes.hasNext()) {
             JCRNodeWrapper candidate = (JCRNodeWrapper) nodes.next();
-            if (!candidate.isNodeType(SHARED_MIXIN)) {
+            if (!candidate.isNodeType(kind.mixin)) {
                 continue;
             }
             // The query already filtered on equality; re-comparing keeps an index quirk
             // (case folding, normalisation) from widening the match.
-            if (!constantTimeEquals(contentKey, candidate.getPropertyAsString(KEY_PROPS))) {
+            if (!constantTimeEquals(contentKey, candidate.getPropertyAsString(kind.keyProperty))) {
                 continue;
             }
-            if (isExpired(candidate)) {
-                LOGGER.info("Shared link for {} has expired", candidate.getPath());
+            if (kind.expiryRequired && !candidate.hasProperty(kind.expiryProperty)) {
+                // Refused rather than served forever. The visitor sees the same answer as any
+                // other miss; this line is how the contributor finds out.
+                LOGGER.warn("{} on {} has no {} and is refused: this kind of link must expire",
+                        kind, candidate.getPath(), kind.expiryProperty);
+                continue;
+            }
+            if (isExpired(candidate, kind.expiryProperty)) {
+                LOGGER.info("{} for {} has expired", kind, candidate.getPath());
                 continue;
             }
             return candidate;
@@ -274,11 +345,11 @@ public class ContentSharingServlet extends HttpServlet {
     }
 
     /** {@code true} when the node carries an expiry date that is already in the past. */
-    private static boolean isExpired(JCRNodeWrapper node) throws RepositoryException {
-        if (!node.hasProperty(EXPIRY_PROPS)) {
+    private static boolean isExpired(JCRNodeWrapper node, String expiryProperty) throws RepositoryException {
+        if (!node.hasProperty(expiryProperty)) {
             return false;
         }
-        Calendar expiry = node.getProperty(EXPIRY_PROPS).getDate();
+        Calendar expiry = node.getProperty(expiryProperty).getDate();
         return expiry != null && expiry.before(Calendar.getInstance());
     }
 
@@ -297,7 +368,8 @@ public class ContentSharingServlet extends HttpServlet {
         }
         try {
             ExtendedNodeType nodeType = NodeTypeRegistry.getInstance().getNodeType(type);
-            return canCarrySharedMixin(nodeType) ? nodeType.getName() : null;
+            boolean shareable = canCarry(nodeType, SHARED_MIXIN) || canCarry(nodeType, REVIEW_MIXIN);
+            return shareable ? nodeType.getName() : null;
         } catch (NoSuchNodeTypeException e) {
             return null;
         }
@@ -305,11 +377,11 @@ public class ContentSharingServlet extends HttpServlet {
 
     /**
      * {@code true} when {@code nodeType} satisfies one of the {@code extends} constraints declared
-     * by {@value #SHARED_MIXIN}, i.e. a node of that type is allowed to carry the mixin at all.
+     * by {@code mixinName}, i.e. a node of that type is allowed to carry that mixin at all.
      */
-    private boolean canCarrySharedMixin(ExtendedNodeType nodeType) {
+    private boolean canCarry(ExtendedNodeType nodeType, String mixinName) {
         try {
-            ExtendedNodeType mixin = NodeTypeRegistry.getInstance().getNodeType(SHARED_MIXIN);
+            ExtendedNodeType mixin = NodeTypeRegistry.getInstance().getNodeType(mixinName);
             List<ExtendedNodeType> constraints = mixin.getMixinExtends();
             if (constraints.isEmpty()) {
                 // An unconstrained mixin can be applied anywhere, so this test has nothing to say.
@@ -323,7 +395,7 @@ public class ContentSharingServlet extends HttpServlet {
                 }
             }
         } catch (NoSuchNodeTypeException e) {
-            LOGGER.warn("Mixin {} is not registered; the sharing endpoint serves nothing", SHARED_MIXIN);
+            LOGGER.warn("Mixin {} is not registered", mixinName);
         }
         return false;
     }
@@ -415,8 +487,8 @@ public class ContentSharingServlet extends HttpServlet {
                 + "</body></html>");
     }
 
-    private void renderContent(JCRNodeWrapper node, HttpServletRequest request, HttpServletResponse response)
-            throws RepositoryException, IOException {
+    private void renderContent(JCRNodeWrapper node, LinkKind kind, HttpServletRequest request,
+            HttpServletResponse response) throws RepositoryException, IOException {
         Resource resource = new Resource(node, "html", "default", "page");
         RenderContext renderContext = new RenderContext(unwrapRequest(request), response,
                 JCRSessionFactory.getInstance().getCurrentUser());
@@ -424,7 +496,7 @@ public class ContentSharingServlet extends HttpServlet {
         JCRSiteNode site = node.getResolveSite();
         renderContext.setSite(site);
         renderContext.setSiteInfo(new SiteInfo(site));
-        renderContext.setWorkspace(Constants.LIVE_WORKSPACE);
+        renderContext.setWorkspace(kind.workspace);
         renderContext.setServletPath(Render.getRenderServletPath());
         renderContext.setMainResource(resource);
         renderContext.setEditMode(false);
@@ -445,7 +517,7 @@ public class ContentSharingServlet extends HttpServlet {
         }
 
         if (!Boolean.TRUE.equals(request.getAttribute(NOTICE_RENDERED_ATTRIBUTE))) {
-            markup = withSharedLinkNotice(markup, renderContext.getMainResourceLocale());
+            markup = withSharedLinkNotice(markup, kind.noticeKey, renderContext.getMainResourceLocale());
         }
 
         response.setContentType("text/html; charset=UTF-8");
@@ -467,7 +539,7 @@ public class ContentSharingServlet extends HttpServlet {
      * never seen. If the markup has no {@code body} element the page is returned untouched: a
      * missing notice is a smaller problem than a broken page.</p>
      */
-    static String withSharedLinkNotice(String markup, Locale locale) {
+    static String withSharedLinkNotice(String markup, String noticeKey, Locale locale) {
         Matcher body = BODY_TAG.matcher(markup);
         if (!body.find()) {
             return markup;
@@ -475,9 +547,9 @@ public class ContentSharingServlet extends HttpServlet {
 
         String text;
         try {
-            text = ResourceBundle.getBundle(BUNDLE, locale).getString("sharedLink.notice");
+            text = ResourceBundle.getBundle(BUNDLE, locale).getString(noticeKey);
         } catch (MissingResourceException e) {
-            LOGGER.warn("No sharedLink.notice string for {}", locale, e);
+            LOGGER.warn("No {} string for {}", noticeKey, locale, e);
             return markup;
         }
 
