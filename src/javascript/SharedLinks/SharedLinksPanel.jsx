@@ -4,7 +4,7 @@ import {useSelector} from 'react-redux';
 import {useMutation, useQuery} from '@apollo/client';
 import {
     Button, Chip, DataTable, Delete, Download, Header, LayoutContent, Loader, Pagination,
-    Publish, Reload, Typography
+    Paper, Publish, Reload, Typography
 } from '@jahia/moonstone';
 
 import {linksQuery, PUBLISH, REVOKE, SITE_CONTEXT} from './queries';
@@ -285,7 +285,7 @@ export const SharedLinksPanel = () => {
                     />
                 }
             >
-                <div className={styles.card}>
+                <Paper hasPadding className={styles.card}>
                     <span className={styles.intro}>
                         <Typography isNowrap={false}>{label(t, 'panel.intro')}</Typography>
                         <Typography variant="caption" isNowrap={false}>
@@ -293,7 +293,7 @@ export const SharedLinksPanel = () => {
                         </Typography>
                     </span>
                     {content()}
-                </div>
+                </Paper>
             </LayoutContent>
         </div>
     );
