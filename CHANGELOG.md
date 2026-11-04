@@ -6,6 +6,16 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- **Revoke left sharing switched on.** It cleared the key only: the mixin and the expiry date stayed
+  on the node, so Content Editor still showed the link as active. Revoke now removes the key and its
+  expiry date in that language, and the mixin once the node has no other link of the same kind.
+- **Opening a page could bring a revoked link back.** The Content Editor field made a new key
+  whenever it opened empty, which also marked the form as changed: saving the page for any reason
+  re-activated the link, with its old expiry date. The field now makes a key only when **Create
+  new URL** is clicked.
+
 ## 2.4.1 - 2026-11-04
 
 ### Changed

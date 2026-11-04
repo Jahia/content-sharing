@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import * as PropTypes from 'prop-types';
 import {useTranslation} from 'react-i18next';
 import {Button, Reload, Copy, Typography} from '@jahia/moonstone';
@@ -68,14 +68,9 @@ const SharedURLGeneratorCMP = ({field, value, onChange, editorContext}) => {
     const {nodeTypeName, lang} = editorContext;
     const {t} = useTranslation('content-sharing');
 
-    // Seeding the field is a state mutation, so it belongs in an effect. From the render body it
-    // fired on every re-render and, under StrictMode, twice per mount.
-    useEffect(() => {
-        if (!value) {
-            onChange(getRandomString({length, format}));
-        }
-    }, [value, length, format, onChange]);
-
+    // No key is made unless the editor asks for one. The field used to fill itself whenever it
+    // opened empty, so a link revoked from the Shared links panel came back with a new key, and
+    // its old expiry date, the next time anyone saved the page for any reason.
     const url = shareUrl({key: value, nodeType: nodeTypeName, language: lang, base: origin});
     const handleNewKey = () => onChange(getRandomString({length, format}));
     const handleCopy = () => navigator.clipboard.writeText(url);

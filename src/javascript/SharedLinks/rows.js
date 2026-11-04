@@ -9,6 +9,37 @@ export const PROPERTY = {
     [REVIEW]: 'cshare:reviewUrl'
 };
 
+const EXPIRY_PROPERTY = {
+    [PUBLISHED]: 'cshare:sharedUrlExpiry',
+    [REVIEW]: 'cshare:reviewUrlExpiry'
+};
+
+const MIXIN = {
+    [PUBLISHED]: 'cshmix:sharedUrl',
+    [REVIEW]: 'cshmix:reviewUrl'
+};
+
+/**
+ * What revoking one link removes from authoring.
+ *
+ * The key, and the expiry date that belonged to it: a date left behind would come back with the
+ * next key. Once no other language of the node holds a key of the same kind, the mixin too, so
+ * Content Editor shows sharing as off instead of a switch that is on with nothing behind it.
+ * `rows` is the whole report, which holds every language's key for the node.
+ */
+export const revocationPlan = (row, rows) => {
+    const othersRemain = rows.some(other =>
+        other.uuid === row.uuid &&
+        other.kind === row.kind &&
+        other.language !== row.language &&
+        other.inAuthoring);
+    return {
+        property: PROPERTY[row.kind],
+        expiryProperty: row.expiry ? EXPIRY_PROPERTY[row.kind] : null,
+        mixin: othersRemain ? null : MIXIN[row.kind]
+    };
+};
+
 const value = property => (property && property.value) || null;
 
 const KEY_FIELD = {[PUBLISHED]: 'sharedKey', [REVIEW]: 'reviewKey'};
