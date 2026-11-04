@@ -6,6 +6,25 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- **The module's own styles never reached the page.** The front-end build exported each
+  stylesheet's classes one by one while both components read them as one object, so every class
+  was dropped and only Moonstone's own look remained. This is why the layout fixes listed for 2.3.1
+  and 2.3.2 (paths wrapping in the Shared links panel, among others) never took effect. The build
+  now exports them the way the components read them, and the pull-request workflow refuses a
+  package in which they would be dropped again.
+- In the Shared links panel, a review link with no expiry date showed a warning cut off after a few
+  words, and **Publish revocation** ran past the edge of its column. Each column holding a label is
+  now as wide as its longest label in the four shipped languages, the warning is a short label with
+  its explanation underneath, and the kind of link and its language sit under the content path
+  instead of in columns of their own. Below the width those columns need, the table scrolls rather
+  than cutting a label.
+- The link in the Content Editor field was written in a grey the host draws at 40% opacity, too
+  faint to read comfortably; it is now in the regular text colour, inside a box with its padding.
+- The field's **Copy the URL** button passed a property Moonstone does not read, so it could never
+  be disabled.
+
 ### Changed
 
 - The README shows the module as it is today: the two link fields in Content Editor, the Shared

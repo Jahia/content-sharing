@@ -44,17 +44,30 @@
     overflow-x: auto;
 }
 
+/* The fixed columns (596 px, see the panel) plus room for the content to be read. */
+.tableBox table {
+    min-width: 820px;
+}
+
 /* Rows are a fixed 48 px with hidden overflow, so a two-line cell is cut rather than grown. */
 .tableBox tbody tr {
     height: auto;
     min-height: 48px;
 }
 
-/* Cells are `nowrap` with hidden overflow, so a long path is cut rather than wrapped. */
 .tableBox tbody td {
     height: auto;
     padding-top: var(--moon-spacing-small);
     padding-bottom: var(--moon-spacing-small);
+}
+
+/*
+ * Cells are `nowrap` with hidden overflow, through a Moonstone rule that outranks one written on
+ * the cell, so a long path or hint would be cut. The wrappers inside each cell undo it for the
+ * text they hold.
+ */
+.pathCell,
+.stack {
     white-space: normal;
 }
 
@@ -63,6 +76,25 @@
     flex-direction: column;
     gap: var(--moon-spacing-nano);
     min-width: 0;
+}
+
+.meta,
+.stack {
+    display: flex;
+    gap: var(--moon-spacing-small);
+}
+
+.meta {
+    align-items: center;
+    margin-top: var(--moon-spacing-nano);
+}
+
+/* A cell is a flex row: without `min-width: 0` the hint keeps to one line and is cut. */
+.stack {
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    gap: var(--moon-spacing-nano);
 }
 
 .path {

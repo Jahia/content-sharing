@@ -99,11 +99,10 @@ const SharedURLGeneratorCMP = ({field, value, onChange, editorContext}) => {
 
     return (
         <>
-            <Typography component="div"
-                        className={styles.urlBox}
-            >
-                {url || t('label.url.generateKey')}
-            </Typography>
+            {/* The box is its own element: Moonstone's typography class outranks its padding. */}
+            <div className={styles.urlBox}>
+                <Typography component="span">{url || t('label.url.generateKey')}</Typography>
+            </div>
             <Button className={styles.generateButton}
                     data-sel-role="generateSharedUrl"
                     variant="outlined"
@@ -119,7 +118,7 @@ const SharedURLGeneratorCMP = ({field, value, onChange, editorContext}) => {
                     size="big"
                     color="accent"
                     label={t('label.btn.copyUrl')}
-                    disabled={!url}
+                    isDisabled={!url}
                     icon={<Copy/>}
                     onClick={handleCopy}
             />

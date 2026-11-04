@@ -59,6 +59,20 @@ jobs:
           fi
           echo "remoteEntry.js is in the jar"
 
+      # css-loader 7 exports a CSS module's classes by name unless told otherwise, and the
+      # components import them as one object: the build passes and every class is dropped, as it
+      # was from 2.3.0 to 2.3.2. Each stylesheet must reach the bundle as that object.
+      - name: Refuse a jar whose stylesheets lost their classes
+        run: |
+          JAR=$(ls target/*.jar | grep -v sources | head -1)
+          EXPECTED=$(find src/javascript -name '*.module.css' | wc -l)
+          FOUND=$(unzip -p "$JAR" 'javascript/apps/*.js' | grep -o '\.locals={' | wc -l)
+          if [ "$FOUND" -lt "$EXPECTED" ]; then
+            echo "::error::$EXPECTED CSS modules in the source, $FOUND exported as an object in the jar"
+            exit 1
+          fi
+          echo "$FOUND of $EXPECTED CSS modules exported as an object"
+
       - uses: actions/upload-artifact@v4
         with:
           name: module-jar
