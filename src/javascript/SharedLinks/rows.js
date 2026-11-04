@@ -1,3 +1,6 @@
+/** A language code as a GraphQL alias prefix: `pt-BR` is a valid code and an invalid alias. */
+export const aliasFor = language => 'l_' + language.replace(/[^A-Za-z0-9]/g, '_');
+
 export const PUBLISHED = 'published';
 export const REVIEW = 'review';
 
@@ -11,27 +14,29 @@ const value = property => (property && property.value) || null;
 const KEY_FIELD = {[PUBLISHED]: 'sharedKey', [REVIEW]: 'reviewKey'};
 const EXPIRY_FIELD = {[PUBLISHED]: 'sharedExpiry', [REVIEW]: 'reviewExpiry'};
 
+/** Each key is read per language, under an alias of its own: see `linksQuery`. */
+const read = (node, language, field) => value(node[aliasFor(language) + '__' + field]);
+
 /**
  * Reads one workspace into the map, under one key per node, language and kind.
  *
  * `side` is `authoring` or `live`: an entry may end up with one side or both, and which sides it
  * has is the whole state of the link.
  */
-const collect = (map, nodes, kind, side) => {
+const collect = (map, {nodes, kind, side, languages}) => {
     (nodes || []).forEach(node => {
-        ((node.translations && node.translations.nodes) || []).forEach(translation => {
-            if (!value(translation[KEY_FIELD[kind]])) {
+        languages.forEach(language => {
+            if (!read(node, language, KEY_FIELD[kind])) {
                 return;
             }
 
-            const language = value(translation.language);
             const id = node.uuid + '\u0000' + language + '\u0000' + kind;
             const entry = map.get(id) || {id, uuid: node.uuid, language, kind};
             entry[side] = {
                 path: node.path,
                 displayName: node.displayName || node.path.split('/').pop(),
                 nodeType: (node.primaryNodeType && node.primaryNodeType.name) || '',
-                expiry: value(translation[EXPIRY_FIELD[kind]])
+                expiry: read(node, language, EXPIRY_FIELD[kind])
             };
             map.set(id, entry);
         });
@@ -53,11 +58,12 @@ const collect = (map, nodes, kind, side) => {
  *
  * A review link is served from authoring and never reaches live, so it only ever has one side.
  */
-export const toRows = ({authoring, live}) => {
+export const toRows = ({authoring, live}, languages = []) => {
     const map = new Map();
-    collect(map, authoring && authoring.shared && authoring.shared.nodes, PUBLISHED, 'authoring');
-    collect(map, authoring && authoring.review && authoring.review.nodes, REVIEW, 'authoring');
-    collect(map, live && live.shared && live.shared.nodes, PUBLISHED, 'live');
+    const nodesOf = (query, alias) => (query && query[alias] && query[alias].nodes) || [];
+    collect(map, {nodes: nodesOf(authoring, 'shared'), kind: PUBLISHED, side: 'authoring', languages});
+    collect(map, {nodes: nodesOf(authoring, 'review'), kind: REVIEW, side: 'authoring', languages});
+    collect(map, {nodes: nodesOf(live, 'shared'), kind: PUBLISHED, side: 'live', languages});
 
     const rows = [];
     map.forEach(entry => {

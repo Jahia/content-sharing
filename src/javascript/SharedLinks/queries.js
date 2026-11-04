@@ -1,61 +1,82 @@
 import {gql} from '@apollo/client';
 
+import {aliasFor} from './rows';
+
+/** `en`, `fr`, `zh_CN`, `pt-BR`. Anything else never reaches a query document. */
+const LANGUAGE_CODE = /^[A-Za-z]{2,3}([_-][A-Za-z0-9]{2,8})*$/;
+
 /**
- * Everything the panel lists, in one round trip.
+ * What the panel needs before it can ask for anything: whether this site switched the module on,
+ * and which languages it has. The languages decide the shape of the links query, so they have to
+ * come back first.
+ */
+export const SITE_CONTEXT = gql`
+    query ContentSharingSiteContext($sitePath: String!) {
+        jcr(workspace: EDIT) {
+            nodeByPath(path: $sitePath) {
+                installed: property(name: "j:installedModules") { values }
+                site {
+                    languages { language }
+                }
+            }
+        }
+    }
+`;
+
+/**
+ * Every key, in every language of the site.
+ *
+ * The keys are internationalized, so each one is read with an explicit `language` argument and an
+ * alias of its own. Reading them through the `jnt:translation` children instead looks tidier and
+ * does not work: on Jahia 8.2.3.2 / jContent 3.8.1 that child list comes back empty through
+ * GraphQL, with no error, so every link went unreported (molex, 2026-11-04).
  *
  * Both kinds are read from the authoring workspace, which holds every node whether published or
  * not. The published kind is read from the live workspace as well, because that is the workspace
  * its links are served from: a key cleared in authoring but still live is still a working link,
  * and the panel has to be able to say so.
- *
- * The keys are internationalized, so they live on the translation child nodes rather than on the
- * node itself. Reading those children gives every language in one query, with no alias built at
- * runtime: Apollo needs a static document.
  */
-const TRANSLATIONS = `
-    uuid
-    path
-    displayName(language: $displayLanguage)
-    primaryNodeType { name }
-    translations: children(typesFilter: {types: ["jnt:translation"]}) {
-        nodes {
-            language: property(name: "jcr:language") { value }
-            sharedKey: property(name: "cshare:sharedUrl") { value }
-            sharedExpiry: property(name: "cshare:sharedUrlExpiry") { value }
-            reviewKey: property(name: "cshare:reviewUrl") { value }
-            reviewExpiry: property(name: "cshare:reviewUrlExpiry") { value }
-        }
-    }
-`;
+export const linksDocumentText = languages => {
+    const codes = languages.filter(language => LANGUAGE_CODE.test(language));
+    const keys = codes.map(language => {
+        const alias = aliasFor(language);
+        return [
+            ['sharedKey', 'cshare:sharedUrl'],
+            ['sharedExpiry', 'cshare:sharedUrlExpiry'],
+            ['reviewKey', 'cshare:reviewUrl'],
+            ['reviewExpiry', 'cshare:reviewUrlExpiry']
+        ].map(([field, property]) =>
+            `${alias}__${field}: property(name: "${property}", language: "${language}") { value }`
+        ).join('\n            ');
+    }).join('\n            ');
 
-export const SHARED_LINKS = gql`
-    query ContentSharingLinks($sitePath: String!, $displayLanguage: String!) {
-        authoring: jcr(workspace: EDIT) {
-            shared: nodesByCriteria(criteria: {
-                nodeType: "cshmix:sharedUrl", paths: [$sitePath], pathType: ANCESTOR
-            }) { nodes { ${TRANSLATIONS} } }
-            review: nodesByCriteria(criteria: {
-                nodeType: "cshmix:reviewUrl", paths: [$sitePath], pathType: ANCESTOR
-            }) { nodes { ${TRANSLATIONS} } }
-        }
-        live: jcr(workspace: LIVE) {
-            shared: nodesByCriteria(criteria: {
-                nodeType: "cshmix:sharedUrl", paths: [$sitePath], pathType: ANCESTOR
-            }) { nodes { ${TRANSLATIONS} } }
-        }
-    }
-`;
+    const node = `
+            uuid
+            path
+            displayName(language: $displayLanguage)
+            primaryNodeType { name }
+            ${keys}`;
 
-/** Whether this site switched the module on, checked in the component and not only on the route. */
-export const MODULE_ON_SITE = gql`
-    query ContentSharingOnSite($sitePath: String!) {
-        jcr(workspace: EDIT) {
-            nodeByPath(path: $sitePath) {
-                installed: property(name: "j:installedModules") { values }
+    const byType = (alias, type) => `
+        ${alias}: nodesByCriteria(criteria: {
+            nodeType: "${type}", paths: [$sitePath], pathType: ANCESTOR
+        }) { nodes { ${node} } }`;
+
+    return `
+        query ContentSharingLinks($sitePath: String!, $displayLanguage: String!) {
+            authoring: jcr(workspace: EDIT) {
+                ${byType('shared', 'cshmix:sharedUrl')}
+                ${byType('review', 'cshmix:reviewUrl')}
+            }
+            live: jcr(workspace: LIVE) {
+                ${byType('shared', 'cshmix:sharedUrl')}
             }
         }
-    }
-`;
+    `;
+};
+
+/** The document Apollo sends. Its text is built separately so that it can be parsed in a test. */
+export const linksQuery = languages => gql(linksDocumentText(languages));
 
 /**
  * Clears one key, in one language.

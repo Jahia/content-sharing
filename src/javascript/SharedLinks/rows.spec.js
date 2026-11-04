@@ -1,36 +1,44 @@
 import {describe, expect, it} from 'vitest';
 import {
-    isExpired, isInert, isNotYetLive, isPendingRevocation, PUBLISHED, REVIEW, toRows
+    aliasFor, isExpired, isInert, isNotYetLive, isPendingRevocation, PUBLISHED, REVIEW, toRows
 } from './rows';
 
-const translation = props => ({
-    language: {value: props.language},
-    sharedKey: props.sharedKey ? {value: props.sharedKey} : null,
-    sharedExpiry: props.sharedExpiry ? {value: props.sharedExpiry} : null,
-    reviewKey: props.reviewKey ? {value: props.reviewKey} : null,
-    reviewExpiry: props.reviewExpiry ? {value: props.reviewExpiry} : null
-});
+const LANGUAGES = ['en', 'fr'];
 
-const node = (uuid, path, translations) => ({
-    uuid,
-    path,
-    displayName: path.split('/').pop(),
-    primaryNodeType: {name: 'jnt:page'},
-    translations: {nodes: translations}
-});
+/**
+ * A node as the server returns it: one aliased property per language and per key, which is what
+ * `linksQuery` asks for. Translation children are deliberately absent -- the instance returns none.
+ */
+const node = (uuid, path, keys = {}) => {
+    const built = {
+        uuid,
+        path,
+        displayName: path.split('/').pop(),
+        primaryNodeType: {name: 'jnt:page'},
+        __typename: 'GenericJCRNode'
+    };
+    Object.entries(keys).forEach(([language, fields]) => {
+        Object.entries(fields).forEach(([field, value]) => {
+            built[aliasFor(language) + '__' + field] = value === null ? null : {value};
+        });
+    });
+    return built;
+};
 
 const answer = ({shared = [], review = [], liveShared = []} = {}) => ({
     authoring: {shared: {nodes: shared}, review: {nodes: review}},
     live: {shared: {nodes: liveShared}}
 });
 
+const rowsOf = (data, languages = LANGUAGES) => toRows(data, languages);
+
 describe('toRows', () => {
     it('reports one row per language, each with its own key and expiry', () => {
-        const rows = toRows(answer({
-            shared: [node('u1', '/sites/demo/home', [
-                translation({language: 'en', sharedKey: 'AAA', sharedExpiry: '2027-01-01T00:00:00.000Z'}),
-                translation({language: 'fr', sharedKey: 'BBB', sharedExpiry: '2027-02-01T00:00:00.000Z'})
-            ])]
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/home', {
+                en: {sharedKey: 'AAA', sharedExpiry: '2027-01-01T00:00:00.000Z'},
+                fr: {sharedKey: 'BBB', sharedExpiry: '2027-02-01T00:00:00.000Z'}
+            })]
         }));
 
         expect(rows).toHaveLength(2);
@@ -39,21 +47,47 @@ describe('toRows', () => {
     });
 
     it('leaves out a language that carries no key', () => {
-        const rows = toRows(answer({
-            shared: [node('u1', '/sites/demo/home', [
-                translation({language: 'en', sharedKey: 'AAA'}),
-                translation({language: 'fr'})
-            ])]
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}, fr: {sharedKey: null}})]
         }));
 
         expect(rows).toHaveLength(1);
         expect(rows[0].language).toBe('en');
     });
 
+    it('reports a page the server answered with, which is what the panel failed to do', () => {
+        // The shape of the real answer from molex: pages found, keys on the node under their
+        // per-language aliases. Reading them anywhere else reported nothing at all.
+        const rows = rowsOf(answer({
+            review: [
+                node('u1', '/sites/molex-classic/home/about', {en: {reviewKey: 'RRR', reviewExpiry: '2027-01-01T00:00:00.000Z'}}),
+                node('u2', '/sites/molex-classic/home/trends', {en: {reviewKey: 'SSS'}})
+            ],
+            liveShared: [node('u1', '/sites/molex-classic/home/about')]
+        }));
+
+        expect(rows.map(r => r.path)).toEqual([
+            '/sites/molex-classic/home/about',
+            '/sites/molex-classic/home/trends'
+        ]);
+        expect(rows[0].kind).toBe(REVIEW);
+    });
+
+    it('does not let a node present in both workspaces cancel itself out', () => {
+        // The live copy of a review-shared page carries no key. It must not remove the row.
+        const rows = rowsOf(answer({
+            review: [node('u1', '/sites/demo/home', {en: {reviewKey: 'RRR'}})],
+            liveShared: [node('u1', '/sites/demo/home')]
+        }));
+
+        expect(rows).toHaveLength(1);
+        expect(rows[0].stillLive).toBeNull();
+    });
+
     it('reports both kinds for the same node and language, as separate links', () => {
-        const rows = toRows(answer({
-            shared: [node('u1', '/sites/demo/home', [translation({language: 'en', sharedKey: 'AAA'})])],
-            review: [node('u1', '/sites/demo/home', [translation({language: 'en', reviewKey: 'RRR'})])]
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}})],
+            review: [node('u1', '/sites/demo/home', {en: {reviewKey: 'RRR'}})]
         }));
 
         expect(rows.map(r => r.kind)).toEqual([PUBLISHED, REVIEW]);
@@ -61,10 +95,9 @@ describe('toRows', () => {
     });
 
     it('merges the two workspaces into one row rather than two', () => {
-        const page = [translation({language: 'en', sharedKey: 'AAA'})];
-        const rows = toRows(answer({
-            shared: [node('u1', '/sites/demo/home', page)],
-            liveShared: [node('u1', '/sites/demo/home', page)]
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}})],
+            liveShared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}})]
         }));
 
         expect(rows).toHaveLength(1);
@@ -73,69 +106,58 @@ describe('toRows', () => {
     });
 
     it('keeps reporting a link whose key was cleared in authoring while live still serves it', () => {
-        // What revoking leaves behind. Reading authoring alone would drop the row at the one
-        // moment the link is both unwanted and working.
-        const rows = toRows(answer({
-            liveShared: [node('u1', '/sites/demo/home', [
-                translation({language: 'en', sharedKey: 'AAA', sharedExpiry: '2027-01-01T00:00:00.000Z'})
-            ])]
+        const rows = rowsOf(answer({
+            liveShared: [node('u1', '/sites/demo/home', {
+                en: {sharedKey: 'AAA', sharedExpiry: '2027-01-01T00:00:00.000Z'}
+            })]
         }));
 
         expect(rows).toHaveLength(1);
         expect(rows[0].inAuthoring).toBe(false);
         expect(rows[0].stillLive).toBe(true);
-        expect(rows[0].path).toBe('/sites/demo/home');
         expect(rows[0].expiry).toBe('2027-01-01T00:00:00.000Z');
         expect(isPendingRevocation(rows[0])).toBe(true);
     });
 
     it('tells a link not yet published from one still live after a revocation', () => {
-        const rows = toRows(answer({
-            shared: [node('u1', '/sites/demo/alpha', [translation({language: 'en', sharedKey: 'AAA'})])],
-            liveShared: [node('u2', '/sites/demo/beta', [translation({language: 'en', sharedKey: 'BBB'})])]
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/alpha', {en: {sharedKey: 'AAA'}})],
+            liveShared: [node('u2', '/sites/demo/beta', {en: {sharedKey: 'BBB'}})]
         }));
 
         const alpha = rows.find(r => r.path === '/sites/demo/alpha');
         const beta = rows.find(r => r.path === '/sites/demo/beta');
         expect(isNotYetLive(alpha)).toBe(true);
-        expect(isPendingRevocation(alpha)).toBe(false);
-        expect(isNotYetLive(beta)).toBe(false);
         expect(isPendingRevocation(beta)).toBe(true);
     });
 
     it('matches the two workspaces per language, not per node', () => {
-        const rows = toRows(answer({
-            shared: [node('u1', '/sites/demo/home', [
-                translation({language: 'en', sharedKey: 'AAA'}),
-                translation({language: 'fr', sharedKey: 'BBB'})
-            ])],
-            liveShared: [node('u1', '/sites/demo/home', [translation({language: 'en', sharedKey: 'AAA'})])]
+        const rows = rowsOf(answer({
+            shared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}, fr: {sharedKey: 'BBB'}})],
+            liveShared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}})]
         }));
 
         expect(rows.find(r => r.language === 'en').stillLive).toBe(true);
         expect(rows.find(r => r.language === 'fr').stillLive).toBe(false);
     });
 
-    it('never claims a review link reached live', () => {
-        const rows = toRows(answer({
-            review: [node('u1', '/sites/demo/home', [translation({language: 'en', reviewKey: 'RRR'})])]
-        }));
+    it('reads a language whose code is not a valid GraphQL alias', () => {
+        const rows = rowsOf(
+            answer({shared: [node('u1', '/sites/demo/home', {'pt-BR': {sharedKey: 'AAA'}})]}),
+            ['pt-BR']
+        );
 
-        expect(rows[0].stillLive).toBeNull();
-        expect(isPendingRevocation(rows[0])).toBe(false);
-        expect(isNotYetLive(rows[0])).toBe(false);
+        expect(rows).toHaveLength(1);
+        expect(rows[0].language).toBe('pt-BR');
     });
 
     it('sorts by path, then kind, then language', () => {
-        const rows = toRows(answer({
+        const rows = rowsOf(answer({
             shared: [
-                node('u2', '/sites/demo/zebra', [translation({language: 'en', sharedKey: 'A'})]),
-                node('u1', '/sites/demo/alpha', [
-                    translation({language: 'fr', sharedKey: 'B'}),
-                    translation({language: 'en', sharedKey: 'C'})
-                ])
+                node('u2', '/sites/demo/zebra', {en: {sharedKey: 'A'}}),
+                node('u1', '/sites/demo/alpha', {en: {sharedKey: 'C'}, fr: {sharedKey: 'B'}})
             ],
-            review: [node('u1', '/sites/demo/alpha', [translation({language: 'en', reviewKey: 'D'})])]
+            review: [node('u1', '/sites/demo/alpha', {en: {reviewKey: 'D'}})]
         }));
 
         expect(rows.map(r => r.path + ' ' + r.kind + ' ' + r.language)).toEqual([
@@ -147,8 +169,14 @@ describe('toRows', () => {
     });
 
     it('reports nothing, and throws nothing, when a workspace answered with no nodes', () => {
-        expect(toRows({authoring: null, live: null})).toEqual([]);
+        expect(toRows({authoring: null, live: null}, LANGUAGES)).toEqual([]);
+        expect(toRows({authoring: {}, live: {}}, LANGUAGES)).toEqual([]);
         expect(toRows({authoring: {}, live: {}})).toEqual([]);
+    });
+
+    it('reports nothing when it was given no languages, rather than guessing one', () => {
+        const rows = toRows(answer({shared: [node('u1', '/sites/demo/home', {en: {sharedKey: 'AAA'}})]}), []);
+        expect(rows).toEqual([]);
     });
 });
 

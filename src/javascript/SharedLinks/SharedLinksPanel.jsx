@@ -7,7 +7,7 @@ import {
     Publish, Reload, Typography
 } from '@jahia/moonstone';
 
-import {MODULE_ON_SITE, PUBLISH, REVOKE, SHARED_LINKS} from './queries';
+import {linksQuery, PUBLISH, REVOKE, SITE_CONTEXT} from './queries';
 import {
     isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, PROPERTY, state, toRows
 } from './rows';
@@ -67,15 +67,33 @@ export const SharedLinksPanel = () => {
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(PER_PAGE[1]);
 
-    const onSite = useQuery(MODULE_ON_SITE, {variables: {sitePath}, fetchPolicy: 'network-only'});
-    const links = useQuery(SHARED_LINKS, {
+    // `no-cache` throughout: the same node comes back under `authoring` (EDIT) and `live` (LIVE)
+    // with one uuid, so a normalized cache keyed on it would let one workspace overwrite the
+    // other. A report also has no business reading a value the server did not just send.
+    const onSite = useQuery(SITE_CONTEXT, {variables: {sitePath}, fetchPolicy: 'no-cache'});
+
+    const siteNode = onSite.data && onSite.data.jcr && onSite.data.jcr.nodeByPath;
+    const languages = useMemo(() => {
+        const declared = (siteNode && siteNode.site && siteNode.site.languages) || [];
+        return declared.map(entry => entry.language).filter(Boolean);
+    }, [siteNode]);
+
+    // The languages decide the shape of the document, so it is built once per set of them.
+    const languageKey = languages.join(',');
+    const document = useMemo(() => linksQuery(languageKey ? languageKey.split(',') : []), [languageKey]);
+
+    const links = useQuery(document, {
         variables: {sitePath, displayLanguage: language},
-        fetchPolicy: 'network-only'
+        fetchPolicy: 'no-cache',
+        skip: languages.length === 0
     });
     const [revoke] = useMutation(REVOKE);
     const [publish] = useMutation(PUBLISH);
 
-    const rows = useMemo(() => (links.data ? toRows(links.data) : []), [links.data]);
+    const rows = useMemo(
+        () => (links.data ? toRows(links.data, languages) : []),
+        [links.data, languages]
+    );
 
     // Revoking shortens the list; without this the panel can sit on a page that no longer exists.
     useEffect(() => {
@@ -110,8 +128,7 @@ export const SharedLinksPanel = () => {
 
     // The route option only hides the menu entry: a direct URL, or switching site while the panel
     // is open, renders it on a site that never switched the module on.
-    const nodeByPath = onSite.data && onSite.data.jcr && onSite.data.jcr.nodeByPath;
-    const installed = nodeByPath && nodeByPath.installed;
+    const installed = siteNode && siteNode.installed;
     const enabled = Boolean(installed && installed.values && installed.values.indexOf(MODULE) !== -1);
 
     const columns = useMemo(() => [
@@ -172,7 +189,7 @@ export const SharedLinksPanel = () => {
     ], [t, busy, onPublish, onRevoke]);
 
     const content = () => {
-        if (onSite.loading || links.loading) {
+        if (onSite.loading || (links.loading && !links.data)) {
             return <Loader size="big"/>;
         }
 
