@@ -36,7 +36,8 @@ const collect = (map, {nodes, kind, side, languages}) => {
                 path: node.path,
                 displayName: node.displayName || node.path.split('/').pop(),
                 nodeType: (node.primaryNodeType && node.primaryNodeType.name) || '',
-                expiry: read(node, language, EXPIRY_FIELD[kind])
+                expiry: read(node, language, EXPIRY_FIELD[kind]),
+                key: read(node, language, KEY_FIELD[kind])
             };
             map.set(id, entry);
         });
@@ -68,6 +69,10 @@ export const toRows = ({authoring, live}, languages = []) => {
     const rows = [];
     map.forEach(entry => {
         const side = entry.authoring || entry.live;
+        // The key a visitor's link carries is the one the serving workspace holds: live for a
+        // published link while it has a live side (a key regenerated in authoring and not yet
+        // published leaves the old one working), authoring otherwise.
+        const served = entry.kind === PUBLISHED ? (entry.live || entry.authoring) : entry.authoring;
         rows.push({
             id: entry.id,
             uuid: entry.uuid,
@@ -77,6 +82,7 @@ export const toRows = ({authoring, live}, languages = []) => {
             displayName: side.displayName,
             nodeType: side.nodeType,
             expiry: side.expiry,
+            key: served.key,
             inAuthoring: Boolean(entry.authoring),
             // Only a published link has a live side; a review link never reaches live.
             stillLive: entry.kind === PUBLISHED ? Boolean(entry.live) : null

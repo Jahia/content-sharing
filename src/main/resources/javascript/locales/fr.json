@@ -20,6 +20,8 @@
     "noExpiryHint": "Ce lien ne fonctionne pas tant qu'il n'en a pas.",
     "expiredOn": "Expiré le {{date}}",
     "revoke": "Révoquer",
+    "copyLink": "Copier le lien",
+    "copied": "Copié",
     "publishRevocation": "Publier la révocation",
     "exportCsv": "Exporter en CSV",
     "exportJson": "Exporter en JSON",

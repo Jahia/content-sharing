@@ -3,7 +3,7 @@ import {useTranslation} from 'react-i18next';
 import {useSelector} from 'react-redux';
 import {useMutation, useQuery} from '@apollo/client';
 import {
-    Button, Chip, DataTable, Delete, Download, Header, LayoutContent, Loader, Pagination,
+    Button, Chip, Copy, DataTable, Delete, Download, Header, LayoutContent, Loader, Pagination,
     Paper, Publish, Reload, Typography
 } from '@jahia/moonstone';
 
@@ -12,6 +12,7 @@ import {
     isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, PROPERTY, state, toRows
 } from './rows';
 import {download, fileName, toCsv, toJson} from './exports';
+import {defaultOrigin, shareUrl} from '../shareUrl';
 import styles from './sharedLinks.module.css';
 
 const MODULE = 'content-sharing';
@@ -81,6 +82,7 @@ export const SharedLinksPanel = () => {
     const sitePath = '/sites/' + siteKey;
 
     const [busy, setBusy] = useState(null);
+    const [copied, setCopied] = useState(null);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(PER_PAGE[1]);
 
@@ -107,10 +109,28 @@ export const SharedLinksPanel = () => {
     const [revoke] = useMutation(REVOKE);
     const [publish] = useMutation(PUBLISH);
 
-    const rows = useMemo(
-        () => (links.data ? toRows(links.data, languages) : []),
-        [links.data, languages]
-    );
+    // Each row carries the address its link opens, built as the editor field builds it.
+    const rows = useMemo(() => {
+        const base = defaultOrigin();
+        return (links.data ? toRows(links.data, languages) : []).map(row => ({
+            ...row,
+            url: shareUrl({key: row.key, nodeType: row.nodeType, language: row.language, base})
+        }));
+    }, [links.data, languages]);
+
+    // "Copied" reads on the button for a moment, then the button offers to copy again.
+    useEffect(() => {
+        if (!copied) {
+            return undefined;
+        }
+
+        const timer = setTimeout(() => setCopied(null), 2000);
+        return () => clearTimeout(timer);
+    }, [copied]);
+
+    const onCopy = useCallback(row => {
+        navigator.clipboard.writeText(row.url).then(() => setCopied(row.id));
+    }, []);
 
     // Revoking shortens the list; without this the panel can sit on a page that no longer exists.
     useEffect(() => {
@@ -165,6 +185,20 @@ export const SharedLinksPanel = () => {
                         <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>
                         <Typography variant="caption">{data.language}</Typography>
                     </span>
+                    {data.url && (
+                        <span className={styles.linkLine}>
+                            <Typography variant="caption" isNowrap={false} className={styles.link}>
+                                {data.url}
+                            </Typography>
+                            <Button
+                                size="small"
+                                variant="ghost"
+                                icon={<Copy/>}
+                                label={label(t, copied === data.id ? 'panel.copied' : 'panel.copyLink')}
+                                onClick={() => onCopy(data)}
+                            />
+                        </span>
+                    )}
                 </span>
             )
         },
@@ -202,7 +236,7 @@ export const SharedLinksPanel = () => {
                     onClick={() => onRevoke(data)}
                 />)
         }
-    ], [t, busy, onPublish, onRevoke]);
+    ], [t, busy, copied, onCopy, onPublish, onRevoke]);
 
     const content = () => {
         if (onSite.loading || (links.loading && !links.data)) {

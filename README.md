@@ -57,7 +57,10 @@ Responses are `no-store`, `no-referrer` and `noindex`, because the key travels i
 ## Configuring the selector
 
 The [selector] reads three options: the key length (`length`, default **24**), the alphabet
-(`format`, default **aA#**) and the URL origin (`origin`, default `window.location.origin`).
+(`format`, default **aA#**) and the base address (`origin`, default: this Jahia, under its context
+path). A path in `origin` is kept, so a front end that serves Jahia under a prefix can name it. The
+Shared links panel reads no form, so it always uses the default: a site that sets its own `origin`
+sees that address in Content Editor and this Jahia's own in the panel.
 
 ```json
 {
@@ -218,12 +221,18 @@ the workspace it is served from. Without it a link can only be found by opening 
 created on.
 
 ![Site Settings, Shared links: eight links of both kinds in English and French, one in each
-state the panel reports, with Revoke or Publish revocation on every row and the Export CSV and
-Export JSON buttons in the header](doc/images/shared-links-panel.png)
+state the panel reports, each with its address and a Copy link button, Revoke or Publish
+revocation on every row, and the Export CSV and Export JSON buttons in the
+header](doc/images/shared-links-panel.png)
 
 Each row carries the action it needs, and the panel runs every read and every change as the person
 using it: someone who cannot edit the content cannot revoke its link. **Revoke** clears that one
 key, in that one language, and leaves every other link alone.
+
+Each row shows the address the link opens, built the way the Content Editor field builds it, with
+**Copy link** next to it. It is the key the serving workspace holds: for a link to published
+content that has a live side, the live key, so a key regenerated in authoring and not yet published
+shows the address visitors still hold.
 
 A link to published content is served from the live workspace, so clearing its key only takes effect
 once that change is published. Such a link stays listed as **Revoked, still live**, with the action
@@ -240,6 +249,8 @@ them from a working link either way:
 A review link with no expiry date is flagged as well: the endpoint refuses it, so it never worked.
 
 **Export CSV** and **Export JSON** hand the whole list to the browser; nothing leaves the page.
+They leave the addresses out on purpose: an export is a file that gets passed around, and every
+address in it would be a working link.
 
 ## Known limitations
 

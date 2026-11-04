@@ -20,6 +20,8 @@
     "noExpiryHint": "Ohne Ablaufdatum funktioniert dieser Link nicht.",
     "expiredOn": "Abgelaufen am {{date}}",
     "revoke": "Widerrufen",
+    "copyLink": "Link kopieren",
+    "copied": "Kopiert",
     "publishRevocation": "Widerruf veröffentlichen",
     "exportCsv": "CSV exportieren",
     "exportJson": "JSON exportieren",

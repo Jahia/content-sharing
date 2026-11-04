@@ -90,6 +90,15 @@ describe('toJson', () => {
     });
 });
 
+describe('what an export leaves out', () => {
+    it('never carries a key: an export travels, and every key in it is a working link', () => {
+        const secret = 'Zq8xSecretKey0000000000A';
+        const rows = [row({key: secret})];
+        expect(toCsv(rows)).not.toContain(secret);
+        expect(toJson(rows, 'demo')).not.toContain(secret);
+    });
+});
+
 describe('fileName', () => {
     it('names the feature, the site, the language and the day', () => {
         expect(fileName('demo', 'en', 'csv')).toMatch(/^content-sharing-links-demo-en-\d{4}-\d{2}-\d{2}\.csv$/);
