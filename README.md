@@ -6,8 +6,6 @@ The contributor generates a secret key on the content; the module turns it into 
 holding that URL reads the content as an anonymous visitor. A `jnt:file` is served as a download,
 anything else is rendered as a page.
 
-![100]
-
 > **Before you change `ContentSharingServlet`.** The endpoint reads under a **system session**, so
 > JCR permissions do not narrow what it can reach: the servlet decides on its own what may be
 > served. Keep the parameter validation described below intact, and treat any change to it as a
@@ -18,6 +16,12 @@ anything else is rendered as a page.
 Add the **Share protected content** (`cshmix:sharedUrl`) mixin to a content node or a file, generate
 a key, and copy the URL. Set an optional **expiry date** to have the link stop working on its own;
 leave it empty for a link that never expires.
+
+To show a draft to someone before it is published, add **Share for review before publication**
+(`cshmix:reviewUrl`) instead, or as well: see [Two kinds of link](#two-kinds-of-link).
+
+![Content Editor on a page with both link fields switched on: the review link with its required
+expiry date, then the link to the published content with its optional one](doc/images/content-editor-fields.png)
 
 ## How it works
 
@@ -137,6 +141,9 @@ separately where review sharing is allowed at all.
 Reviewers see a notice saying the content is a draft, may still change, and that its links may not
 open for them.
 
+![A page opened through a review link, with the draft notice above the site's own
+header](doc/images/review-notice.png)
+
 **Files in a review rendering come back through this endpoint.** A draft renders out of the
 authoring workspace, so every image, stylesheet and script in it is addressed under
 `/files/default/...`, which a reviewer may not read: without this the page would arrive as text
@@ -210,6 +217,10 @@ of this site: both kinds, every language, with the content each one points at, i
 the workspace it is served from. Without it a link can only be found by opening the content it was
 created on.
 
+![Site Settings, Shared links: eight links of both kinds in English and French, one in each
+state the panel reports, with Revoke or Publish revocation on every row and the Export CSV and
+Export JSON buttons in the header](doc/images/shared-links-panel.png)
+
 Each row carries the action it needs, and the panel runs every read and every change as the person
 using it: someone who cannot edit the content cannot revoke its link. **Revoke** clears that one
 key, in that one language, and leaves every other link alone.
@@ -235,8 +246,5 @@ A review link with no expiry date is flagged as well: the endpoint refuses it, s
 - A key is stored as an ordinary indexed JCR property, so it is readable wherever the node's
   properties are.
 - Opening `/share` is not throttled and leaves no record of who opened a link.
-- `@material-ui/core@3` and `@jahia/react-material` are deprecated; the selector only needs
-  Moonstone.
 
-[100]: doc/images/000_shared_URL_UI.png
 [selector]: src/javascript/SharedURLGenerator/SharedURLGenerator.jsx

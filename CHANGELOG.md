@@ -6,6 +6,13 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- The README shows the module as it is today: the two link fields in Content Editor, the Shared
+  links panel and the notice a reviewer sees. The screenshot it carried was of the 1.x field,
+  with a URL format the module no longer accepts. It also no longer lists the old Material UI
+  libraries as a limitation: the module stopped depending on them.
+
 ## 2.3.2 - 2026-11-04
 
 ### Fixed
