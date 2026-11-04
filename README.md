@@ -13,9 +13,10 @@ anything else is rendered as a page.
 
 ## How a contributor uses it
 
-Add the **Share protected content** (`cshmix:sharedUrl`) mixin to a content node or a file, generate
-a key, and copy the URL. Set an optional **expiry date** to have the link stop working on its own;
-leave it empty for a link that never expires.
+Add the **Share protected content** (`cshmix:sharedUrl`) mixin to a content node or a file, click
+**Create new URL**, and copy the URL. Set an optional **expiry date** to have the link stop working
+on its own; leave it empty for a link that never expires. The field never makes a key by itself: a
+link exists only once someone has asked for it.
 
 To show a draft to someone before it is published, add **Share for review before publication**
 (`cshmix:reviewUrl`) instead, or as well: see [Two kinds of link](#two-kinds-of-link).
@@ -225,8 +226,10 @@ state the panel reports, with their kind, language, expiry, state and action in 
 is expanded to its address and a Copy link button](doc/images/shared-links-panel.png)
 
 Each row carries the action it needs, and the panel runs every read and every change as the person
-using it: someone who cannot edit the content cannot revoke its link. **Revoke** clears that one
-key, in that one language, and leaves every other link alone.
+using it: someone who cannot edit the content cannot revoke its link. **Revoke** removes that one
+link, in that one language: its key and its expiry date. When the node has no other link of the
+same kind left in any language, it removes the mixin too, so Content Editor shows sharing as off.
+Every other link is left alone.
 
 Each row expands to the address the link opens, with **Copy link** next to it: click the row, or
 focus it and press Enter or Space. The address is built the way the Content Editor field builds it,
@@ -256,6 +259,11 @@ address in it would be a working link.
 
 - A key is stored as an ordinary indexed JCR property, so it is readable wherever the node's
   properties are.
+- A review link's key is published with its node. The endpoint only accepts review keys from the
+  authoring workspace, so the copy in live opens nothing by itself, but while the link is active it
+  is the same key, readable by whoever can read that node's properties in live.
+- **Publish** on a *Revoked, still live* row publishes the node in that language, so any other
+  unpublished change on that node, and on its sub-nodes, is published with the revocation.
 - Opening `/share` is not throttled and leaves no record of who opened a link.
 
 [selector]: src/javascript/SharedURLGenerator/SharedURLGenerator.jsx

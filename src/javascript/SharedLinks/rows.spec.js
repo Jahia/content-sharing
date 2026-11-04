@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
-    aliasFor, isExpired, isInert, isNotYetLive, isPendingRevocation, PUBLISHED, REVIEW, toRows
+    aliasFor, isExpired, isInert, isNotYetLive, isPendingRevocation, PUBLISHED, REVIEW,
+    revocationPlan, toRows
 } from './rows';
 
 const LANGUAGES = ['en', 'fr'];
@@ -221,5 +222,39 @@ describe('isInert', () => {
 
     it('leaves a published link alone, which works without one', () => {
         expect(isInert({kind: PUBLISHED, expiry: null})).toBe(false);
+    });
+});
+
+describe('revocationPlan', () => {
+    const link = (language, overrides = {}) => ({
+        uuid: 'u1', kind: REVIEW, language, expiry: '2026-11-07T00:00:00.000Z', inAuthoring: true, ...overrides
+    });
+
+    it('removes the key, its expiry date and the mixin when it was the node\'s only link of that kind', () => {
+        const row = link('en');
+        expect(revocationPlan(row, [row])).toEqual({
+            property: 'cshare:reviewUrl', expiryProperty: 'cshare:reviewUrlExpiry', mixin: 'cshmix:reviewUrl'
+        });
+    });
+
+    it('keeps the mixin while another language still holds a key of that kind', () => {
+        const row = link('en');
+        expect(revocationPlan(row, [row, link('fr')]).mixin).toBeNull();
+    });
+
+    it('does not count a language whose key is only left in live', () => {
+        const row = link('en', {kind: PUBLISHED});
+        const stillLive = link('fr', {kind: PUBLISHED, inAuthoring: false});
+        expect(revocationPlan(row, [row, stillLive]).mixin).toBe('cshmix:sharedUrl');
+    });
+
+    it('does not count the other kind of link on the same node', () => {
+        const row = link('en');
+        expect(revocationPlan(row, [row, link('en', {kind: PUBLISHED})]).mixin).toBe('cshmix:reviewUrl');
+    });
+
+    it('leaves the expiry date alone when there is none to remove', () => {
+        const row = link('en', {expiry: null});
+        expect(revocationPlan(row, [row]).expiryProperty).toBeNull();
     });
 });

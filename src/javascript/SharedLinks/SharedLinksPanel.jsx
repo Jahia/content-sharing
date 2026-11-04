@@ -7,9 +7,9 @@ import {
     Paper, Publish, Reload, Typography
 } from '@jahia/moonstone';
 
-import {linksQuery, PUBLISH, REVOKE, SITE_CONTEXT} from './queries';
+import {linksQuery, PUBLISH, REMOVE_MIXIN, REVOKE, SITE_CONTEXT} from './queries';
 import {
-    isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, PROPERTY, state, toRows
+    isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, revocationPlan, state, toRows
 } from './rows';
 import {download, fileName, toCsv, toJson} from './exports';
 import {defaultOrigin, shareUrl} from '../shareUrl';
@@ -122,6 +122,7 @@ export const SharedLinksPanel = () => {
         skip: languages.length === 0
     });
     const [revoke] = useMutation(REVOKE);
+    const [removeMixin] = useMutation(REMOVE_MIXIN);
     const [publish] = useMutation(PUBLISH);
 
     // Each row carries the address its link opens, built as the editor field builds it.
@@ -194,9 +195,19 @@ export const SharedLinksPanel = () => {
         }
     }, [links]);
 
-    const onRevoke = useCallback(row => act(row, () => revoke({
-        variables: {pathOrId: row.uuid, property: PROPERTY[row.kind], language: row.language}
-    })), [act, revoke]);
+    // The key, its expiry date, and the mixin once the node has no other link of that kind.
+    const onRevoke = useCallback(row => act(row, async () => {
+        const plan = revocationPlan(row, rows);
+        const pathOrId = row.uuid;
+        await revoke({variables: {pathOrId, property: plan.property, language: row.language}});
+        if (plan.expiryProperty) {
+            await revoke({variables: {pathOrId, property: plan.expiryProperty, language: row.language}});
+        }
+
+        if (plan.mixin) {
+            await removeMixin({variables: {pathOrId, mixin: plan.mixin}});
+        }
+    }), [act, revoke, removeMixin, rows]);
 
     const onPublish = useCallback(row => act(row, () => publish({
         variables: {pathOrId: row.uuid, languages: [row.language]}

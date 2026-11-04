@@ -95,6 +95,17 @@ export const REVOKE = gql`
     }
 `;
 
+/** Removes the sharing mixin once the node has no key of that kind left. */
+export const REMOVE_MIXIN = gql`
+    mutation ContentSharingRemoveMixin($pathOrId: String!, $mixin: String!) {
+        jcr {
+            mutateNode(pathOrId: $pathOrId) {
+                removeMixins(mixins: [$mixin])
+            }
+        }
+    }
+`;
+
 /** Sends a cleared key to the live workspace, where published links are served from. */
 export const PUBLISH = gql`
     mutation ContentSharingPublish($pathOrId: String!, $languages: [String]!) {
