@@ -7,5 +7,43 @@
     "url": {
       "generateKey": "Haga clic en el botón 'CREAR NUEVA URL' para generar la URL"
     }
+  },
+  "panel": {
+    "title": "Enlaces compartidos",
+    "intro": "Todos los enlaces que permiten a alguien sin cuenta acceder a contenido de este sitio. Revocar un enlace borra su clave: la dirección deja de funcionar de inmediato.",
+    "introLive": "Un enlace a contenido publicado se sirve desde el espacio live: borrar su clave solo surte efecto cuando ese cambio se publica. Hasta entonces el enlace sigue listado como «Revocado, todavía en vivo» y la acción de su fila publica la revocación.",
+    "none": "No hay contenido compartido en este sitio.",
+    "notOnSite": "El módulo Content Sharing no está activado en este sitio.",
+    "error": "No se han podido leer los enlaces.",
+    "never": "Sin caducidad",
+    "noExpiry": "Sin fecha de caducidad, este enlace no funciona",
+    "expiredOn": "Caducado el {{date}}",
+    "revoke": "Revocar",
+    "publishRevocation": "Publicar la revocación",
+    "exportCsv": "Exportar CSV",
+    "exportJson": "Exportar JSON",
+    "kind": {
+      "published": "Contenido protegido",
+      "review": "Revisión"
+    },
+    "column": {
+      "content": "Contenido",
+      "kind": "Tipo",
+      "language": "Idioma",
+      "expiry": "Caducidad",
+      "state": "Estado",
+      "action": "Acción"
+    },
+    "state": {
+      "authoring": "Edición",
+      "live": "En vivo",
+      "notYetLive": "Aún no publicado",
+      "pendingRevocation": "Revocado, todavía en vivo"
+    },
+    "reload": "Recargar",
+    "pagination": {
+      "itemsPerPage": "Enlaces por página",
+      "of": "de"
+    }
   }
 }

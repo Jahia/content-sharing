@@ -1,0 +1,281 @@
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
+import {useSelector} from 'react-redux';
+import {useMutation, useQuery} from '@apollo/client';
+import {
+    Button, Chip, DataTable, Delete, Download, Header, LayoutContent, Loader, Pagination,
+    Publish, Reload, Typography
+} from '@jahia/moonstone';
+
+import {MODULE_ON_SITE, PUBLISH, REVOKE, SHARED_LINKS} from './queries';
+import {
+    isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, PROPERTY, state, toRows
+} from './rows';
+import {download, fileName, toCsv, toJson} from './exports';
+import styles from './sharedLinks.module.css';
+
+const MODULE = 'content-sharing';
+const PER_PAGE = [10, 25, 50, 100];
+
+const label = (t, key, options) => t(MODULE + ':' + key, options);
+
+/** When the link stops working, and whether it ever will. */
+const ExpiryCell = ({row, t}) => {
+    if (isInert(row)) {
+        return <Chip label={label(t, 'panel.noExpiry')} color="warning"/>;
+    }
+
+    if (!row.expiry) {
+        return <Typography variant="caption">{label(t, 'panel.never')}</Typography>;
+    }
+
+    const on = new Date(row.expiry).toLocaleDateString();
+    return isExpired(row) ?
+        <Chip label={label(t, 'panel.expiredOn', {date: on})} color="danger"/> :
+        <Typography variant="caption">{on}</Typography>;
+};
+
+/**
+ * Which workspace serves the link. The one that matters is `pendingRevocation`: the key is gone
+ * from authoring, so nothing in jContent shows it any more, and live still serves it.
+ */
+const StateCell = ({row, t}) => {
+    const where = state(row);
+
+    if (where === PENDING_REVOCATION) {
+        return <Chip label={label(t, 'panel.state.pendingRevocation')} color="danger"/>;
+    }
+
+    if (where === LIVE) {
+        return <Chip label={label(t, 'panel.state.live')} color="warning"/>;
+    }
+
+    return (
+        <Typography variant="caption">
+            {label(t, where === NOT_YET_LIVE ? 'panel.state.notYetLive' : 'panel.state.authoring')}
+        </Typography>
+    );
+};
+
+export const SharedLinksPanel = () => {
+    const {t} = useTranslation(MODULE);
+    const siteKey = useSelector(reduxState => reduxState.site);
+    const language = useSelector(reduxState => reduxState.language) || 'en';
+    const sitePath = '/sites/' + siteKey;
+
+    const [busy, setBusy] = useState(null);
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(PER_PAGE[1]);
+
+    const onSite = useQuery(MODULE_ON_SITE, {variables: {sitePath}, fetchPolicy: 'network-only'});
+    const links = useQuery(SHARED_LINKS, {
+        variables: {sitePath, displayLanguage: language},
+        fetchPolicy: 'network-only'
+    });
+    const [revoke] = useMutation(REVOKE);
+    const [publish] = useMutation(PUBLISH);
+
+    const rows = useMemo(() => (links.data ? toRows(links.data) : []), [links.data]);
+
+    // Revoking shortens the list; without this the panel can sit on a page that no longer exists.
+    useEffect(() => {
+        const pages = Math.max(1, Math.ceil(rows.length / perPage));
+        if (page > pages) {
+            setPage(pages);
+        }
+    }, [rows.length, perPage, page]);
+
+    const shown = useMemo(
+        () => rows.slice((page - 1) * perPage, page * perPage),
+        [rows, page, perPage]
+    );
+
+    const act = useCallback(async (row, run) => {
+        setBusy(row.id);
+        try {
+            await run();
+            await links.refetch();
+        } finally {
+            setBusy(null);
+        }
+    }, [links]);
+
+    const onRevoke = useCallback(row => act(row, () => revoke({
+        variables: {pathOrId: row.uuid, property: PROPERTY[row.kind], language: row.language}
+    })), [act, revoke]);
+
+    const onPublish = useCallback(row => act(row, () => publish({
+        variables: {pathOrId: row.uuid, languages: [row.language]}
+    })), [act, publish]);
+
+    // The route option only hides the menu entry: a direct URL, or switching site while the panel
+    // is open, renders it on a site that never switched the module on.
+    const nodeByPath = onSite.data && onSite.data.jcr && onSite.data.jcr.nodeByPath;
+    const installed = nodeByPath && nodeByPath.installed;
+    const enabled = Boolean(installed && installed.values && installed.values.indexOf(MODULE) !== -1);
+
+    const columns = useMemo(() => [
+        {
+            key: 'displayName',
+            label: label(t, 'panel.column.content'),
+            width: '34%',
+            render: ({data}) => (
+                <span className={styles.pathCell}>
+                    <Typography isNowrap={false}>{data.displayName}</Typography>
+                    <Typography variant="caption" isNowrap={false} className={styles.path}>
+                        {data.path}
+                    </Typography>
+                </span>
+            )
+        },
+        {
+            key: 'kind',
+            label: label(t, 'panel.column.kind'),
+            width: '14%',
+            render: ({data}) => <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>
+        },
+        {key: 'language', label: label(t, 'panel.column.language'), width: '8%'},
+        {
+            key: 'expiry',
+            label: label(t, 'panel.column.expiry'),
+            width: '16%',
+            render: ({data}) => <ExpiryCell row={data} t={t}/>
+        },
+        {
+            key: 'state',
+            label: label(t, 'panel.column.state'),
+            width: '16%',
+            render: ({data}) => <StateCell row={data} t={t}/>
+        },
+        {
+            key: 'id',
+            label: label(t, 'panel.column.action'),
+            width: '12%',
+            render: ({data}) => (state(data) === PENDING_REVOCATION ?
+                <Button
+                    size="default"
+                    color="danger"
+                    icon={<Publish/>}
+                    label={label(t, 'panel.publishRevocation')}
+                    isDisabled={busy !== null}
+                    onClick={() => onPublish(data)}
+                /> :
+                <Button
+                    size="default"
+                    color="danger"
+                    icon={<Delete/>}
+                    label={label(t, 'panel.revoke')}
+                    isDisabled={busy !== null}
+                    onClick={() => onRevoke(data)}
+                />)
+        }
+    ], [t, busy, onPublish, onRevoke]);
+
+    const content = () => {
+        if (onSite.loading || links.loading) {
+            return <Loader size="big"/>;
+        }
+
+        if (!enabled) {
+            return <Typography isNowrap={false}>{label(t, 'panel.notOnSite')}</Typography>;
+        }
+
+        if (links.error) {
+            return <Typography isNowrap={false}>{label(t, 'panel.error')}</Typography>;
+        }
+
+        if (rows.length === 0) {
+            return <Typography isNowrap={false}>{label(t, 'panel.none')}</Typography>;
+        }
+
+        return (
+            <>
+                <div className={styles.tableBox}>
+                    <DataTable
+                        primaryKey="id"
+                        data={shown}
+                        columns={columns}
+                        data-cs-role="links-table"
+                    />
+                </div>
+                <div className={styles.paginationBox}>
+                    <Pagination
+                        currentPage={page}
+                        itemsPerPage={perPage}
+                        itemsPerPageOptions={PER_PAGE}
+                        totalOfItems={rows.length}
+                        i18n={{
+                            itemsPerPage: label(t, 'panel.pagination.itemsPerPage'),
+                            of: label(t, 'panel.pagination.of')
+                        }}
+                        onPageChange={setPage}
+                        onItemsPerPageChange={setPerPage}
+                    />
+                </div>
+            </>
+        );
+    };
+
+    return (
+        <div className={styles.root}>
+            <LayoutContent
+                hasPadding
+                data-cs-role="shared-links-panel"
+                header={
+                    <Header
+                        title={label(t, 'panel.title')}
+                        mainActions={[
+                            <Button
+                                key="reload"
+                                size="big"
+                                variant="ghost"
+                                icon={<Reload/>}
+                                label={label(t, 'panel.reload')}
+                                isDisabled={links.loading}
+                                onClick={() => links.refetch()}
+                            />,
+                            <Button
+                                key="csv"
+                                size="big"
+                                variant="outlined"
+                                icon={<Download/>}
+                                label={label(t, 'panel.exportCsv')}
+                                isDisabled={rows.length === 0}
+                                onClick={() => download(
+                                    toCsv(rows),
+                                    fileName(siteKey, language, 'csv'),
+                                    'text/csv;charset=utf-8'
+                                )}
+                            />,
+                            <Button
+                                key="json"
+                                size="big"
+                                variant="outlined"
+                                icon={<Download/>}
+                                label={label(t, 'panel.exportJson')}
+                                isDisabled={rows.length === 0}
+                                onClick={() => download(
+                                    toJson(rows, siteKey),
+                                    fileName(siteKey, language, 'json'),
+                                    'application/json'
+                                )}
+                            />
+                        ]}
+                    />
+                }
+            >
+                <div className={styles.card}>
+                    <span className={styles.intro}>
+                        <Typography isNowrap={false}>{label(t, 'panel.intro')}</Typography>
+                        <Typography variant="caption" isNowrap={false}>
+                            {label(t, 'panel.introLive')}
+                        </Typography>
+                    </span>
+                    {content()}
+                </div>
+            </LayoutContent>
+        </div>
+    );
+};
+
+SharedLinksPanel.displayName = 'SharedLinksPanel';

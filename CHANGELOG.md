@@ -6,6 +6,37 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **A Shared links panel in Site Settings.** It lists every link that lets someone without an
+  account reach content of this site: both kinds, every language, with the content each one points
+  at, its expiry date and where it is served from. Until now a link could only be found by opening
+  the content it was created on, so a site had no way to answer "what is shared right now?".
+
+  Each row carries the action it needs. Revoking clears that one key, in that one language, and
+  leaves the rest alone. The panel runs every read and every change as the person using it, so the
+  repository decides who may revoke what: someone who cannot edit the content cannot revoke its
+  link.
+
+  A link to published content is served from the live workspace, so clearing its key only takes
+  effect once that change is published. The panel reads both workspaces and keeps such a link
+  listed as "Revoked, still live" with the action that publishes the revocation -- reading the
+  authoring workspace alone would have hidden the link at the one moment it is both unwanted and
+  working.
+
+  The panel also flags a review link with no expiry date, which the endpoint refuses, and a link
+  that is set but not published yet, which does not work either. Both states were previously
+  indistinguishable from a working link.
+
+- Export CSV and Export JSON of the list, built in the browser from what is on screen. A cell that
+  would start as a spreadsheet formula is written as text.
+
+### Changed
+
+- The front-end carries unit tests, which run in the pull-request workflow alongside the linter.
+  They check the panel's reporting, the exports and that the four shipped languages stay in step
+  with each other.
+
 ## 2.2.1 - 2026-11-04
 
 ### Fixed

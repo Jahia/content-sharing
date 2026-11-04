@@ -1,0 +1,78 @@
+/*
+ * Layout only. Everything that carries meaning is a Moonstone component.
+ *
+ * On jContent 3.8 an admin panel's root takes the width of its widest content, and Moonstone table
+ * cells are `white-space: nowrap`: one long path would push the panel past its container and its
+ * header buttons off screen. `contain: inline-size` plus wrapping cells keeps it inside the pane,
+ * and the flex column bounds LayoutContent's scroll box so the page can scroll at all.
+ */
+.root {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0%;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    contain: inline-size;
+    /* The table otherwise paints over Moonstone dialogs, which portal to body at z-index auto. */
+    isolation: isolate;
+}
+
+/* LayoutContent sizes its content on max-content whatever the root does, so it needs this too. */
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--moon-spacing-medium);
+    width: 100%;
+    min-width: 0;
+    contain: inline-size;
+}
+
+.intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--moon-spacing-nano);
+}
+
+.tableBox {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+/* Rows are a fixed 48 px with hidden overflow, so a two-line cell is cut rather than grown. */
+.tableBox tbody tr {
+    height: auto;
+    min-height: 48px;
+}
+
+.tableBox tbody td {
+    height: auto;
+    padding-top: var(--moon-spacing-small);
+    padding-bottom: var(--moon-spacing-small);
+}
+
+.pathCell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--moon-spacing-nano);
+    min-width: 0;
+}
+
+.path {
+    color: var(--color-gray_dark);
+    overflow-wrap: anywhere;
+}
+
+/* Pagination keeps a fixed height: wrapped, its controls fall out of the card. */
+.paginationBox {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.paginationBox > * {
+    flex-wrap: nowrap;
+    width: max-content;
+    margin-left: auto;
+}
