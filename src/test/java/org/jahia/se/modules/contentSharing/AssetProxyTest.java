@@ -36,13 +36,30 @@ public class AssetProxyTest {
     }
 
     @Test
-    public void dropsTheSizingQueryJahiaAppends() {
+    public void consumesTheSizingQueryJahiaAppends() {
+        // Leaving the query behind glues it to the end of the replacement, where a second "?" is
+        // just another character of the last parameter's value: the signature then never matches
+        // and every sized image answers 404. Verified against a live rendering, where exactly the
+        // images Jahia had sized were the ones that did not load.
         String out = rewrite("<img src=\"/files/default/sites/acme/files/a.png?w=302\">");
 
-        // The query is left where it was, outside the rewritten address: the file is served as
-        // stored, which is the documented behaviour.
-        assertTrue(out.contains("asset=%2Fsites%2Facme%2Ffiles%2Fa.png"));
-        assertFalse(out.contains("asset=%2Fsites%2Facme%2Ffiles%2Fa.png%3Fw"));
+        assertFalse("the query must not survive the rewrite", out.contains("?w=302"));
+        assertEquals("one ? in the resulting address", 1, count(out, "\\?"));
+        assertTrue(out.contains("asset=%2Fsites%2Facme%2Ffiles%2Fa.png&"));
+    }
+
+    @Test
+    public void theSignatureIsTheLastThingInARewrittenAddress() {
+        // What broke live: the address ended "...&sig=<hex>?w=302", so getParameter("sig")
+        // returned the hex with the query stuck to it.
+        String out = rewrite("<img src=\"/files/default/sites/acme/files/a.png?w=302\" "
+                + "srcset=\"/files/default/sites/acme/files/b.png?w=750 750w\">");
+
+        Matcher m = Pattern.compile("sig=([^\"\\s]*)").matcher(out);
+        while (m.find()) {
+            assertTrue("a signature must be 32 hex characters and nothing else, was: " + m.group(1),
+                    m.group(1).matches("[0-9a-f]{32}"));
+        }
     }
 
     @Test
