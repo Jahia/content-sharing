@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
-    aliasFor, isExpired, isInert, isNotYetLive, isPendingRevocation, PUBLISHED, REVIEW,
-    revocationPlan, toRows
+    aliasFor, COPY, isExpired, isInert, isNotYetLive, isPendingRevocation, PUBLISHED, REVIEW,
+    revocationPlan, state, toRows
 } from './rows';
 
 const LANGUAGES = ['en', 'fr'];
@@ -233,6 +233,7 @@ describe('revocationPlan', () => {
     it('removes the key, its expiry date and the mixin when it was the node\'s only link of that kind', () => {
         const row = link('en');
         expect(revocationPlan(row, [row])).toEqual({
+            deleteLink: null,
             property: 'cshare:reviewUrl', expiryProperty: 'cshare:reviewUrlExpiry', mixin: 'cshmix:reviewUrl'
         });
     });
@@ -258,3 +259,50 @@ describe('revocationPlan', () => {
         expect(revocationPlan(row, [row]).expiryProperty).toBeNull();
     });
 });
+
+describe('review link nodes', () => {
+    const linkNode = (language, owner = 'u1') => ({
+        uuid: 'link-' + language,
+        path: '/sites/demo/home/about/cshareReviewLinks/' + language,
+        name: language,
+        key: {value: 'KEY-' + language},
+        expiry: {value: '2026-11-12T10:00:00.000Z'},
+        owner: {value: owner},
+        parent: {parent: {uuid: 'u1', path: '/sites/demo/home/about', displayName: 'About', primaryNodeType: {name: 'jnt:page'}}}
+    });
+    const withLinks = (links, review = []) => ({
+        authoring: {shared: {nodes: []}, review: {nodes: review}, reviewLinks: {nodes: links}},
+        live: {shared: {nodes: []}}
+    });
+
+    it('reports one row per link, for its content and its language', () => {
+        const [row] = rowsOf(withLinks([linkNode('en')]));
+        expect(row).toMatchObject({
+            id: 'link-en', uuid: 'u1', kind: REVIEW, language: 'en', path: '/sites/demo/home/about',
+            displayName: 'About', nodeType: 'jnt:page', key: 'KEY-en', isCopy: false,
+            linkPath: '/sites/demo/home/about/cshareReviewLinks/en'
+        });
+    });
+
+    it('flags a link that came with a copy of another node', () => {
+        const [row] = rowsOf(withLinks([linkNode('en', 'someone-else')]));
+        expect(row.isCopy).toBe(true);
+        expect(state(row)).toBe(COPY);
+    });
+
+    it('revokes such a link by deleting it, and nothing else', () => {
+        const [row] = rowsOf(withLinks([linkNode('en')]));
+        expect(revocationPlan(row, [row])).toEqual({
+            deleteLink: '/sites/demo/home/about/cshareReviewLinks/en', property: null, expiryProperty: null, mixin: null
+        });
+    });
+
+    it('does not keep an old review mixin on the node because of a new link', () => {
+        const rows = rowsOf(withLinks([linkNode('fr')], [node('u1', '/sites/demo/home/about', {
+            en: {reviewKey: 'OLD', reviewExpiry: '2026-11-12T10:00:00.000Z'}
+        })]));
+        const legacy = rows.find(row => !row.linkPath);
+        expect(revocationPlan(legacy, rows).mixin).toBe('cshmix:reviewUrl');
+    });
+});
+

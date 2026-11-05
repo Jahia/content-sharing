@@ -13,16 +13,24 @@ anything else is rendered as a page.
 
 ## How a contributor uses it
 
-Add the **Share protected content** (`cshmix:sharedUrl`) mixin to a content node or a file, click
-**Create new URL**, and copy the URL. Set an optional **expiry date** to have the link stop working
-on its own; leave it empty for a link that never expires. The field never makes a key by itself: a
-link exists only once someone has asked for it.
+**To show a draft to someone without an account**, open the page in Page Builder and choose
+**Share for external review** in the menu next to **Preview**. On a content item with its own URL
+or a file, the same entry is in jContent's **More options** and right-click menus. The dialog
+creates the link for the language you are editing, valid for a day to 30 days, and from then on
+shows it: copy it, open it as a reviewer would, move its expiry date, or revoke it.
 
-To show a draft to someone before it is published, add **Share for review before publication**
-(`cshmix:reviewUrl`) instead, or as well: see [Two kinds of link](#two-kinds-of-link).
+![The Share for external review dialog on a page: the link with Copy link, its expiry date, and
+Revoke, Open as a reviewer and Close](doc/images/review-dialog.png)
 
-![Content Editor on a page with both link fields switched on: the review link with its required
-expiry date, then the link to the published content with its optional one](doc/images/content-editor-fields.png)
+**To hand out the published content**, switch on **Share protected content** (`cshmix:sharedUrl`)
+in Content Editor, click **Create new URL**, and copy the URL. Set an optional **expiry date** to
+have the link stop working on its own; leave it empty for a link that never expires. The field
+never makes a key by itself: a link exists only once someone has asked for it.
+
+See [Two kinds of link](#two-kinds-of-link).
+
+![Content Editor on a page with the link to the published content switched on, with its optional
+expiry date](doc/images/content-editor-fields.png)
 
 ## How it works
 
@@ -30,6 +38,8 @@ expiry date, then the link to the published content with its optional one](doc/i
 |---|---|
 | `cshmix:sharedUrl` mixin | Carries `cshare:sharedUrl` (the secret) and `cshare:sharedUrlExpiry` (optional). Extends `jnt:content` and `jnt:file`. |
 | `SharedURLGenerator.jsx` | Content Editor selector: generates the key with the browser CSPRNG and builds the URL. |
+| `cshnt:reviewLink` | One review link: `cshare:key`, `cshare:expiry` (required) and `cshare:owner`, the identifier of the content it opens. Stored as `cshareReviewLinks/<language>` under that content and never published. |
+| `ReviewLinkDialog.jsx` | The **Share for external review** dialog. Writes the link as the signed-in user. |
 | `ContentSharingServlet` | The `/share` alias. Validates the request, resolves the node, then renders or streams it. |
 
 The URL is `GET /modules/share?c=<key>&t=<node type>&lang=<language>`.
@@ -119,9 +129,10 @@ build machine's own path into the manifest of a local build, and the workflow bo
 
 ## Two kinds of link
 
-| | **Share protected content** | **Share for review before publication** |
+| | **Share protected content** | **Share for external review** |
 |---|---|---|
-| mixin | `cshmix:sharedUrl` | `cshmix:reviewUrl` |
+| made in | Content Editor | the Preview menu of a page, the menus of a content item or a file |
+| stored | on the node (`cshmix:sharedUrl`), published with it | in a child of the node that is never published (`cshnt:reviewLink`) |
 | serves | the **published** content, as a visitor sees it | the content **as it stands in the authoring workspace**, published or not |
 | expiry | optional | **required**; a link without one does not work |
 | audience | anyone you hand the link to | people reviewing a draft |
@@ -130,17 +141,37 @@ They are separate on purpose. A node can carry both at once, with different keys
 expiry dates, so handing a draft to three reviewers for a fortnight does not also hand out a
 permanent link to the published page.
 
-Which one a request is depends on the key alone: the two keys live in different properties, so a
-link is only ever one kind and nothing in the URL lets a caller ask for the other. In particular,
+Which one a request is depends on the key alone: the two keys live in different places, so a link
+is only ever one kind and nothing in the URL lets a caller ask for the other. In particular,
 holding a link to published content does not let anyone see the unpublished version of it.
+
+### Where a review link is kept
+
+A review link is a node of its own, `cshareReviewLinks/<language>` under the content it opens, and
+that container is `jmix:nolive`: it is never published. So:
+
+- creating a link, moving its expiry date or revoking it leaves the content's publication status
+  as it was, and the key never reaches the live workspace;
+- the links are not content: jContent's lists do not show them, and only the dialog and the
+  Shared links panel reach them;
+- revoking deletes the link and keeps the container, because deleting the container would mark the
+  content as modified;
+- a page holds the container as it is. A content item or a file first takes the
+  `cshmix:reviewLinks` mixin, which lets it hold one: that first link marks it as modified once,
+  and publishing it sends the mixin, never a key, to live;
+- copying a page copies its links. Each link records the identifier of its content, so a copy's
+  link opens nothing; the Shared links panel lists it as *Copy, opens nothing*, with Revoke.
+
+Review links made before 2.5.0 were stored on the node (`cshmix:reviewUrl`). They keep working until
+they expire or are revoked from the Shared links panel; Content Editor no longer offers the field.
+See [`UPGRADE.md`](UPGRADE.md#250-review-links).
 
 ### What a review link exposes
 
 A review link renders the page from the authoring workspace, so it shows **everything on that page
 that has not been published yet**, including work by other people in areas of the page you did not
-think about. That is what makes it useful for review, and it is why the expiry is required and why
-the capability is its own mixin rather than a second field on the first one: a site can decide
-separately where review sharing is allowed at all.
+think about. That is what makes it useful for review, and it is why the expiry is required and
+why the dialog says so before the link is made.
 
 Reviewers see a notice saying the content is a draft, may still change, and that its links may not
 open for them.
@@ -172,8 +203,10 @@ the page.
 
 ## What can be shared
 
-Both mixins apply to **content items** (`jnt:content`), **files** (`jnt:file`) and **pages**
-(`jnt:page`).
+A link to published content applies to **content items** (`jnt:content`), **files** (`jnt:file`)
+and **pages** (`jnt:page`). **Share for external review** is offered on pages, content items with
+their own URL (`jmix:mainResource`) and files, to someone who can add sub-nodes to them (and, on a
+content item or a file that has no review link yet, manage its node types).
 
 A shared **file** is served as a download and needs nothing from the site. A shared **page**
 renders through its own template. A shared **content item** is rendered in a page context, so the
@@ -217,7 +250,7 @@ rather than making it for you.
 ## Seeing and revoking what is shared
 
 **Site Settings > Shared links** lists every link that lets someone without an account reach content
-of this site: both kinds, every language, with the content each one points at, its expiry date and
+of this site: both kinds, every language, review links made before 2.5.0 included, with the content each one points at, its expiry date and
 the workspace it is served from. Without it a link can only be found by opening the content it was
 created on.
 
@@ -227,9 +260,9 @@ is expanded to its address and a Copy link button](doc/images/shared-links-panel
 
 Each row carries the action it needs, and the panel runs every read and every change as the person
 using it: someone who cannot edit the content cannot revoke its link. **Revoke** removes that one
-link, in that one language: its key and its expiry date. When the node has no other link of the
-same kind left in any language, it removes the mixin too, so Content Editor shows sharing as off.
-Every other link is left alone.
+link, in that one language. A review link is deleted. A link to published content loses its key
+and its expiry date, and when the node has no other link of the same kind left in any language,
+its mixin too, so Content Editor shows sharing as off. Every other link is left alone.
 
 Each row expands to the address the link opens, with **Copy link** next to it: click the row, or
 focus it and press Enter or Space. The address is built the way the Content Editor field builds it,
@@ -258,10 +291,13 @@ address in it would be a working link.
 ## Known limitations
 
 - A key is stored as an ordinary indexed JCR property, so it is readable wherever the node's
-  properties are.
-- A review link's key is published with its node. The endpoint only accepts review keys from the
-  authoring workspace, so the copy in live opens nothing by itself, but while the link is active it
-  is the same key, readable by whoever can read that node's properties in live.
+  properties are: a review key by whoever can read the content in the authoring workspace.
+- A review link made before 2.5.0 has its key published with its node. The endpoint only accepts
+  review keys from the authoring workspace, so the copy in live opens nothing by itself, but while
+  the link is active it is the same key, readable by whoever can read that node's properties in
+  live. Links made with **Share for external review** never reach live.
+- The first review link on a content item or a file marks it as modified, once (see
+  [Where a review link is kept](#where-a-review-link-is-kept)). Pages are not affected.
 - **Publish** on a *Revoked, still live* row publishes the node in that language, so any other
   unpublished change on that node, and on its sub-nodes, is published with the revocation.
 - Opening `/share` is not throttled and leaves no record of who opened a link.

@@ -6,6 +6,22 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **Share for external review**, in the menu next to **Preview** in Page Builder and in the menus
+  of a content item or a file in jContent. A dialog creates a review link for the language being
+  edited, valid for a day to 30 days, and then shows it: copy it, open it as a reviewer, move its
+  expiry date, revoke it. The Shared links panel lists these links with the others.
+
+### Changed
+
+- **Review links are kept out of the content's publication.** A link is now a node of its own under
+  the content, never published: creating, changing or revoking it leaves a page's publication
+  status as it was, and the key never reaches live. A content item or a file takes a mixin with its
+  first link, which marks it as modified once. A link copied with its page opens nothing.
+- The review field is no longer offered in Content Editor. Links made with it before this version
+  keep working until they expire or are revoked from the Shared links panel.
+
 ## 2.4.2 - 2026-11-04
 
 ### Fixed

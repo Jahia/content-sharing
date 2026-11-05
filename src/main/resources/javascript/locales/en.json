@@ -41,12 +41,45 @@
       "authoring": "Authoring",
       "live": "Live",
       "notYetLive": "Not published yet",
-      "pendingRevocation": "Revoked, still live"
+      "pendingRevocation": "Revoked, still live",
+      "copy": "Copy, opens nothing"
     },
     "reload": "Reload",
     "pagination": {
       "itemsPerPage": "Links per page",
       "of": "of"
     }
+  },
+  "review": {
+    "action": "Share for external review",
+    "title": "Share for external review",
+    "intro": "Anyone holding this link sees \"{{name}}\" as it stands now, unpublished changes included, without an account, until the link expires.",
+    "everythingPage": "The reviewer sees every unpublished change on this page, not only yours. Links on it lead to pages they may not be able to open.",
+    "everything": "The reviewer sees every unpublished change on this content, not only yours.",
+    "language": "Link for the {{language}} version",
+    "validFor": "Valid for",
+    "newExpiry": "New expiry",
+    "duration": {
+      "1": "1 day",
+      "3": "3 days",
+      "7": "1 week",
+      "14": "2 weeks",
+      "30": "30 days"
+    },
+    "create": "Create link",
+    "setExpiry": "Change expiry",
+    "active": "Active",
+    "expired": "Expired",
+    "worksUntil": "Works until {{date}}",
+    "expiredOn": "Expired on {{date}}",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "open": "Open as a reviewer",
+    "revoke": "Revoke",
+    "confirmRevoke": "Confirm revoke",
+    "close": "Close",
+    "cancel": "Cancel",
+    "error": "This content could not be read.",
+    "failed": "The link could not be saved. You may not have the rights to share this content."
   }
 }

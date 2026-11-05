@@ -2,6 +2,7 @@
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
 <cshmix = 'http://modules.jahia.org/content-sharing/mix/1.0'>
 <cshare = 'http://modules.jahia.org/content-sharing/1.0'>
+<cshnt = 'http://modules.jahia.org/content-sharing/nt/1.0'>
 
 // Published content, handed to someone without an account.
 [cshmix:sharedUrl] mixin
@@ -11,6 +12,8 @@
  - cshare:sharedUrlExpiry (date) internationalized nofulltext
 
 // Content as it stands in the authoring workspace, handed to a reviewer without an account.
+// How review links were stored before 2.5.0, on the node itself, so the key was published with
+// it. Still served until each link expires; no longer offered in Content Editor.
 // A separate mixin, not a second field on the one above: it reaches content nobody has approved
 // yet, so whether a node can be shared that way is its own decision.
 [cshmix:reviewUrl] mixin
@@ -18,3 +21,29 @@
  itemtype = content
  - cshare:reviewUrl (string) internationalized nofulltext
  - cshare:reviewUrlExpiry (date) internationalized nofulltext
+
+// Review links since 2.5.0: kept beside the node they open, in a container named
+// cshareReviewLinks, one link per language named after it. Never published (jmix:nolive), so
+// creating, changing or revoking a link leaves the node's publication status alone and its key
+// never reaches live. Revoking deletes the link and keeps the container: deleting the container
+// itself marks the node as modified.
+// Plain nt:base, not jnt:content: jContent lists the jnt:content children of an item, and an editor
+// would see the links there. A page's own child definition accepts any type. mix:lastModified on
+// both: a node without it has its changes stamped on the nearest ancestor that has one, the page,
+// which then shows as modified.
+// The endpoint checks the key's shape before any lookup and refuses a link without its owner.
+[cshnt:reviewLink] > nt:base, mix:created, mix:lastModified, jmix:nolive
+ - cshare:key (string) mandatory nofulltext
+ - cshare:expiry (date) mandatory nofulltext
+ // The identifier of the node the link opens. A copy of that node carries a copy of its links
+ // with this value unchanged, so a copied link opens nothing.
+ - cshare:owner (string) nofulltext
+
+[cshnt:reviewLinks] > nt:base, mix:created, mix:lastModified, jmix:nolive
+ + * (cshnt:reviewLink) = cshnt:reviewLink
+
+// Lets a content item or a file hold review links. A page needs no mixin: jnt:page accepts
+// children of any type.
+[cshmix:reviewLinks] mixin
+ extends = jnt:content, jnt:file
+ + cshareReviewLinks (cshnt:reviewLinks) = cshnt:reviewLinks

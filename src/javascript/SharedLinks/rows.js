@@ -28,12 +28,19 @@ const MIXIN = {
  * `rows` is the whole report, which holds every language's key for the node.
  */
 export const revocationPlan = (row, rows) => {
+    // A review link made since 2.5.0 is a node of its own: revoking deletes it, nothing else.
+    if (row.linkPath) {
+        return {deleteLink: row.linkPath, property: null, expiryProperty: null, mixin: null};
+    }
+
     const othersRemain = rows.some(other =>
         other.uuid === row.uuid &&
         other.kind === row.kind &&
         other.language !== row.language &&
-        other.inAuthoring);
+        other.inAuthoring &&
+        !other.linkPath);
     return {
+        deleteLink: null,
         property: PROPERTY[row.kind],
         expiryProperty: row.expiry ? EXPIRY_PROPERTY[row.kind] : null,
         mixin: othersRemain ? null : MIXIN[row.kind]
@@ -89,6 +96,9 @@ const collect = (map, {nodes, kind, side, languages}) => {
  *   hide the link at the exact moment it most needs to show it if it read authoring alone.
  *
  * A review link is served from authoring and never reaches live, so it only ever has one side.
+ *
+ * Review links made since 2.5.0 come as nodes of their own (`authoring.reviewLinks`), one row
+ * each: see `linkRows`.
  */
 export const toRows = ({authoring, live}, languages = []) => {
     const map = new Map();
@@ -120,10 +130,39 @@ export const toRows = ({authoring, live}, languages = []) => {
         });
     });
 
+    rows.push(...linkRows(authoring));
+
     return rows.sort((a, b) =>
         a.path.localeCompare(b.path) ||
         a.kind.localeCompare(b.kind) ||
         a.language.localeCompare(b.language));
+};
+
+/**
+ * One row per review link node. The content is the link's grandparent and the language its name.
+ * A link whose recorded owner is another node came with a copy of that node: the endpoint refuses
+ * it, and the row says so.
+ */
+const linkRows = authoring => {
+    const nodes = (authoring && authoring.reviewLinks && authoring.reviewLinks.nodes) || [];
+    return nodes.filter(link => link.parent && link.parent.parent).map(link => {
+        const owner = link.parent.parent;
+        return {
+            id: link.uuid,
+            uuid: owner.uuid,
+            kind: REVIEW,
+            language: link.name,
+            path: owner.path,
+            displayName: owner.displayName || owner.path.split('/').pop(),
+            nodeType: (owner.primaryNodeType && owner.primaryNodeType.name) || '',
+            expiry: value(link.expiry),
+            key: value(link.key),
+            inAuthoring: true,
+            stillLive: null,
+            linkPath: link.path,
+            isCopy: value(link.owner) !== owner.uuid
+        };
+    });
 };
 
 /** `null` when there is no expiry date, otherwise whether that date has passed. */
@@ -152,12 +191,17 @@ export const LIVE = 'live';
 export const PENDING_REVOCATION = 'pendingRevocation';
 export const NOT_YET_LIVE = 'notYetLive';
 export const AUTHORING = 'authoring';
+export const COPY = 'copy';
 
 /**
  * One word for where the link is served from, so the table, the CSV and the JSON all say the same
  * thing. A review link is always `authoring`: that is the workspace it is served from.
  */
 export const state = row => {
+    if (row.isCopy) {
+        return COPY;
+    }
+
     if (row.kind === REVIEW) {
         return AUTHORING;
     }

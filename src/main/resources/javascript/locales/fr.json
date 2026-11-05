@@ -41,12 +41,45 @@
       "authoring": "Édition",
       "live": "En ligne",
       "notYetLive": "Pas encore publié",
-      "pendingRevocation": "Révoqué, toujours en ligne"
+      "pendingRevocation": "Révoqué, toujours en ligne",
+      "copy": "Copie, n'ouvre rien"
     },
     "reload": "Recharger",
     "pagination": {
       "itemsPerPage": "Liens par page",
       "of": "sur"
     }
+  },
+  "review": {
+    "action": "Partager pour relecture externe",
+    "title": "Partager pour relecture externe",
+    "intro": "Toute personne qui a ce lien voit « {{name}} » tel qu'il est maintenant, modifications non publiées comprises, sans compte, jusqu'à l'expiration du lien.",
+    "everythingPage": "Le relecteur voit toutes les modifications non publiées de cette page, pas seulement les vôtres. Ses liens mènent à des pages qu'il ne pourra peut-être pas ouvrir.",
+    "everything": "Le relecteur voit toutes les modifications non publiées de ce contenu, pas seulement les vôtres.",
+    "language": "Lien pour la version en {{language}}",
+    "validFor": "Valable",
+    "newExpiry": "Nouvelle expiration",
+    "duration": {
+      "1": "1 jour",
+      "3": "3 jours",
+      "7": "1 semaine",
+      "14": "2 semaines",
+      "30": "30 jours"
+    },
+    "create": "Créer le lien",
+    "setExpiry": "Changer l'expiration",
+    "active": "Actif",
+    "expired": "Expiré",
+    "worksUntil": "Fonctionne jusqu'au {{date}}",
+    "expiredOn": "Expiré le {{date}}",
+    "copy": "Copier le lien",
+    "copied": "Copié",
+    "open": "Ouvrir comme un relecteur",
+    "revoke": "Révoquer",
+    "confirmRevoke": "Confirmer",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "error": "Ce contenu n'a pas pu être lu.",
+    "failed": "Le lien n'a pas pu être enregistré. Vous n'avez peut-être pas les droits pour partager ce contenu."
   }
 }

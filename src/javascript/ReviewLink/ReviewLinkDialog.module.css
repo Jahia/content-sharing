@@ -1,0 +1,53 @@
+/* The modal is portaled to body, outside the host's theme scope: every token has a literal fallback. */
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-medium, 16px);
+    min-width: 0;
+}
+
+.body * {
+    white-space: normal;
+}
+
+.warning {
+    padding: var(--spacing-small, 8px) var(--spacing-medium, 16px);
+    color: #2b2f33;
+    background: #fff6e0;
+    border-left: 3px solid #e8a33d;
+}
+
+.state {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-small, 8px);
+}
+
+.urlBox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-small, 8px);
+    padding: var(--spacing-small, 8px);
+    background-color: var(--color-light, #f5f6f7);
+    border: 1px solid #dadada;
+    border-radius: 2px;
+}
+
+.url {
+    flex: 1;
+    min-width: 0;
+    font-family: monospace;
+    overflow-wrap: anywhere;
+    color: #293136;
+}
+
+.expiry {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-small, 8px);
+}
+
+.error {
+    color: #b3261e;
+}

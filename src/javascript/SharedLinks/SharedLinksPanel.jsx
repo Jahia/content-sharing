@@ -7,9 +7,9 @@ import {
     Paper, Publish, Reload, Typography
 } from '@jahia/moonstone';
 
-import {linksQuery, PUBLISH, REMOVE_MIXIN, REVOKE, SITE_CONTEXT} from './queries';
+import {DELETE_LINK, linksQuery, PUBLISH, REMOVE_MIXIN, REVOKE, SITE_CONTEXT} from './queries';
 import {
-    isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, revocationPlan, state, toRows
+    COPY, isExpired, isInert, LIVE, NOT_YET_LIVE, PENDING_REVOCATION, revocationPlan, state, toRows
 } from './rows';
 import {download, fileName, toCsv, toJson} from './exports';
 import {defaultOrigin, shareUrl} from '../shareUrl';
@@ -78,6 +78,10 @@ const StateCell = ({row, t}) => {
         return <Chip label={label(t, 'panel.state.pendingRevocation')} color="danger"/>;
     }
 
+    if (where === COPY) {
+        return <Chip label={label(t, 'panel.state.copy')} color="warning"/>;
+    }
+
     if (where === LIVE) {
         return <Chip label={label(t, 'panel.state.live')} color="warning"/>;
     }
@@ -123,6 +127,7 @@ export const SharedLinksPanel = () => {
     });
     const [revoke] = useMutation(REVOKE);
     const [removeMixin] = useMutation(REMOVE_MIXIN);
+    const [deleteLink] = useMutation(DELETE_LINK);
     const [publish] = useMutation(PUBLISH);
 
     // Each row carries the address its link opens, built as the editor field builds it.
@@ -130,7 +135,8 @@ export const SharedLinksPanel = () => {
         const base = defaultOrigin();
         return (links.data ? toRows(links.data, languages) : []).map(row => ({
             ...row,
-            url: shareUrl({key: row.key, nodeType: row.nodeType, language: row.language, base})
+            // A link a copy brought along opens nothing: no address to hand out.
+            url: row.isCopy ? undefined : shareUrl({key: row.key, nodeType: row.nodeType, language: row.language, base})
         }));
     }, [links.data, languages]);
 
@@ -195,9 +201,15 @@ export const SharedLinksPanel = () => {
         }
     }, [links]);
 
-    // The key, its expiry date, and the mixin once the node has no other link of that kind.
+    // A review link node is deleted. Otherwise the key, its expiry date, and the mixin once the
+    // node has no other link of that kind.
     const onRevoke = useCallback(row => act(row, async () => {
         const plan = revocationPlan(row, rows);
+        if (plan.deleteLink) {
+            await deleteLink({variables: {path: plan.deleteLink}});
+            return;
+        }
+
         const pathOrId = row.uuid;
         await revoke({variables: {pathOrId, property: plan.property, language: row.language}});
         if (plan.expiryProperty) {
@@ -207,7 +219,7 @@ export const SharedLinksPanel = () => {
         if (plan.mixin) {
             await removeMixin({variables: {pathOrId, mixin: plan.mixin}});
         }
-    }), [act, revoke, removeMixin, rows]);
+    }), [act, revoke, removeMixin, deleteLink, rows]);
 
     const onPublish = useCallback(row => act(row, () => publish({
         variables: {pathOrId: row.uuid, languages: [row.language]}

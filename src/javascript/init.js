@@ -1,8 +1,9 @@
 import React from 'react';
 import {registry} from '@jahia/ui-extender';
-import {Link} from '@jahia/moonstone';
+import {Link, Share} from '@jahia/moonstone';
 import {SharedURLGenerator} from './SharedURLGenerator';
 import {SharedLinksPanel} from './SharedLinks/SharedLinksPanel';
+import {ReviewLinkAction} from './ReviewLink/ReviewLinkAction';
 
 import i18next from 'i18next';
 
@@ -16,6 +17,15 @@ export default function () {
             registry.add('selectorType', 'SharedURLGenerator', {
                 cmp: SharedURLGenerator,
                 supportMultiple: false
+            });
+
+            // In the Preview menu of a page, where an editor looks at the draft they want to show,
+            // and in the menus of a content item or a file in jContent's lists.
+            registry.add('action', 'contentSharingReviewLink', {
+                buttonIcon: <Share/>,
+                buttonLabel: 'content-sharing:review.action',
+                targets: ['openInPreviewMenu:10', 'contentItemActions:16', 'contentItemContextActions:16'],
+                component: ReviewLinkAction
             });
 
             registry.add('adminRoute', 'settings/contentSharingLinks', {

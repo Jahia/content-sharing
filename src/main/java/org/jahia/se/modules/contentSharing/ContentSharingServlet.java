@@ -73,7 +73,9 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * <p>The resolved node must carry {@value #SHARED_MIXIN}, its stored key must match in constant
- * time, and its optional expiry date must not have passed. A malformed request, an unknown type
+ * time, and its optional expiry date must not have passed. A review link is a node of its own,
+ * {@value #REVIEW_LINK_TYPE}, under the node it opens, with the same checks and a required expiry
+ * date. A malformed request, an unknown type
  * and a miss all produce the same {@code 404}.</p>
  *
  * <p>Responses are {@code no-store} and {@code no-referrer}: the key travels in the query string,
@@ -102,6 +104,17 @@ public class ContentSharingServlet extends HttpServlet {
     private static final String REVIEW_MIXIN = "cshmix:reviewUrl";
     private static final String REVIEW_KEY_PROPS = "cshare:reviewUrl";
     private static final String REVIEW_EXPIRY_PROPS = "cshare:reviewUrlExpiry";
+
+    /**
+     * Review links since 2.5.0: one node per language, named after it, in a container of that
+     * name under the node the link opens. Never published, so the key stays in authoring.
+     */
+    private static final String REVIEW_LINK_TYPE = "cshnt:reviewLink";
+    private static final String REVIEW_LINKS_CONTAINER = "cshareReviewLinks";
+    private static final String REVIEW_LINKS_MIXIN = "cshmix:reviewLinks";
+    private static final String LINK_KEY = "cshare:key";
+    private static final String LINK_EXPIRY = "cshare:expiry";
+    private static final String LINK_OWNER = "cshare:owner";
 
     /**
      * Set on the request before a shared node is rendered, so a template can tell this rendering
@@ -482,6 +495,15 @@ public class ContentSharingServlet extends HttpServlet {
      */
     private JCRNodeWrapper findSharedNode(JCRSessionWrapper session, LinkKind kind,
             String canonicalType, String contentKey) throws RepositoryException {
+        if (kind == LinkKind.REVIEW) {
+            JCRNodeWrapper owner = findReviewLinkOwner(session, canonicalType, contentKey);
+            if (owner != null) {
+                return owner;
+            }
+            // Review links made before 2.5.0 hold the key on the node itself, read below. They
+            // keep working until they expire or are revoked.
+        }
+
         String statement = "SELECT * FROM [" + canonicalType + "] AS node"
                 + " WHERE node.[" + kind.keyProperty + "] = '" + JCRContentUtils.sqlEncode(contentKey) + "'";
 
@@ -516,6 +538,51 @@ public class ContentSharingServlet extends HttpServlet {
         return null;
     }
 
+    /**
+     * Resolves the node a review link opens, or {@code null}.
+     *
+     * <p>The link must be named after the session's language, carry an expiry date that has not
+     * passed, sit in the {@value #REVIEW_LINKS_CONTAINER} container directly under the node, and
+     * name that node in {@value #LINK_OWNER}. The last check is what a copy fails: copying a page
+     * copies its links, owner value included, and the copy's identifier is another one.</p>
+     */
+    private JCRNodeWrapper findReviewLinkOwner(JCRSessionWrapper session, String canonicalType,
+            String contentKey) throws RepositoryException {
+        String statement = "SELECT * FROM [" + REVIEW_LINK_TYPE + "] AS link"
+                + " WHERE link.[" + LINK_KEY + "] = '" + JCRContentUtils.sqlEncode(contentKey) + "'";
+
+        JCRNodeIteratorWrapper links = session.getWorkspace().getQueryManager()
+                .createQuery(statement, Query.JCR_SQL2)
+                .execute()
+                .getNodes();
+
+        String language = session.getLocale().toString();
+        while (links.hasNext()) {
+            JCRNodeWrapper link = (JCRNodeWrapper) links.next();
+            if (!constantTimeEquals(contentKey, link.getPropertyAsString(LINK_KEY))
+                    || !language.equals(link.getName())) {
+                continue;
+            }
+            if (!link.hasProperty(LINK_EXPIRY) || isExpired(link, LINK_EXPIRY)) {
+                LOGGER.info("Review link {} has expired", link.getPath());
+                continue;
+            }
+            JCRNodeWrapper container = link.getParent();
+            if (!REVIEW_LINKS_CONTAINER.equals(container.getName())) {
+                continue;
+            }
+            JCRNodeWrapper owner = container.getParent();
+            if (!owner.getIdentifier().equals(link.getPropertyAsString(LINK_OWNER))) {
+                LOGGER.info("Review link {} was copied with its node and opens nothing", link.getPath());
+                continue;
+            }
+            if (owner.isNodeType(canonicalType)) {
+                return owner;
+            }
+        }
+        return null;
+    }
+
     /** {@code true} when the node carries an expiry date that is already in the past. */
     private static boolean isExpired(JCRNodeWrapper node, String expiryProperty) throws RepositoryException {
         if (!node.hasProperty(expiryProperty)) {
@@ -540,7 +607,8 @@ public class ContentSharingServlet extends HttpServlet {
         }
         try {
             ExtendedNodeType nodeType = NodeTypeRegistry.getInstance().getNodeType(type);
-            boolean shareable = canCarry(nodeType, SHARED_MIXIN) || canCarry(nodeType, REVIEW_MIXIN);
+            boolean shareable = canCarry(nodeType, SHARED_MIXIN) || canCarry(nodeType, REVIEW_MIXIN)
+                    || canCarry(nodeType, REVIEW_LINKS_MIXIN);
             return shareable ? nodeType.getName() : null;
         } catch (NoSuchNodeTypeException e) {
             return null;
