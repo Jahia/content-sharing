@@ -31,7 +31,8 @@ final HOLDER_MIXIN = "cshmix:reviewLinks"
 
 def say = { String line -> println line; log.info("content-sharing review link migration: " + line) }
 def counts = [nodes: 0, moved: 0, kept: 0, dropped: 0, failed: 0]
-def now = Calendar.instance
+// Fully qualified: the Groovy console imports org.quartz.*, whose Calendar would win.
+def now = java.util.Calendar.getInstance()
 
 say(DRY_RUN ? "DRY RUN - nothing is written" : "WRITING")
 
@@ -54,7 +55,7 @@ JCRTemplate.instance.doExecuteWithSystemSession(null, "default", { JCRSessionWra
             translations.each { translation ->
                 String language = translation.getProperty("jcr:language").string
                 String key = translation.hasProperty(OLD_KEY) ? translation.getProperty(OLD_KEY).string : null
-                Calendar expiry = translation.hasProperty(OLD_EXPIRY) ? translation.getProperty(OLD_EXPIRY).date : null
+                java.util.Calendar expiry = translation.hasProperty(OLD_EXPIRY) ? translation.getProperty(OLD_EXPIRY).date : null
                 String where = "${node.path} [${language}]"
 
                 if (key == null) {
