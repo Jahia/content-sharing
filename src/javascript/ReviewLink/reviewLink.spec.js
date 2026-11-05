@@ -19,7 +19,7 @@ const node = ({isPage = true, hasMixin = false, link} = {}) => ({
 
 const link = (owner, expiry) => ({
     path: '/sites/s/home/about/cshareReviewLinks/en',
-    key: {value: 'abcdefghij0123456789ABCD'},
+    key: {value: 'test-key-not-a-secret'},
     expiry: expiry ? {value: expiry} : null,
     owner: {value: owner}
 });
@@ -34,7 +34,7 @@ describe('readLink', () => {
     it('reads the link of the node', () => {
         expect(readLink(node({link: link('owner-uuid', '2026-11-12T10:00:00.000Z')}), NOW)).toEqual({
             path: '/sites/s/home/about/cshareReviewLinks/en',
-            key: 'abcdefghij0123456789ABCD',
+            key: 'test-key-not-a-secret',
             expiry: '2026-11-12T10:00:00.000Z',
             expired: false
         });
