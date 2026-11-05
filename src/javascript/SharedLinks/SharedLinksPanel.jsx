@@ -108,7 +108,13 @@ export const SharedLinksPanel = () => {
     // `no-cache` throughout: the same node comes back under `authoring` (EDIT) and `live` (LIVE)
     // with one uuid, so a normalized cache keyed on it would let one workspace overwrite the
     // other. A report also has no business reading a value the server did not just send.
-    const onSite = useQuery(SITE_CONTEXT, {variables: {sitePath}, fetchPolicy: 'no-cache'});
+    // `notifyOnNetworkStatusChange`: without it a refetch never reports itself as loading, so
+    // Reload would show nothing while it runs.
+    const onSite = useQuery(SITE_CONTEXT, {
+        variables: {sitePath},
+        fetchPolicy: 'no-cache',
+        notifyOnNetworkStatusChange: true
+    });
 
     const siteNode = onSite.data && onSite.data.jcr && onSite.data.jcr.nodeByPath;
     const languages = useMemo(() => {
@@ -123,8 +129,23 @@ export const SharedLinksPanel = () => {
     const links = useQuery(document, {
         variables: {sitePath, displayLanguage: language},
         fetchPolicy: 'no-cache',
+        notifyOnNetworkStatusChange: true,
         skip: languages.length === 0
     });
+    const [reloading, setReloading] = useState(false);
+
+    // Reload asks the server again for everything the panel shows: the site's languages and
+    // whether it still enables the module, then every link. Both queries bypass Apollo's cache.
+    const onReload = useCallback(async () => {
+        setReloading(true);
+        try {
+            await onSite.refetch();
+            await links.refetch();
+        } finally {
+            setReloading(false);
+        }
+    }, [onSite, links]);
+
     const [revoke] = useMutation(REVOKE);
     const [removeMixin] = useMutation(REMOVE_MIXIN);
     const [deleteLink] = useMutation(DELETE_LINK);
@@ -309,7 +330,8 @@ export const SharedLinksPanel = () => {
     ], [t, busy, copied, onCopy, onPublish, onRevoke]);
 
     const content = () => {
-        if (onSite.loading || (links.loading && !links.data)) {
+        // Only the first load replaces the table: a reload keeps it on screen, the button says it is busy.
+        if ((onSite.loading && !onSite.data) || (links.loading && !links.data)) {
             return <Loader size="big"/>;
         }
 
@@ -379,8 +401,10 @@ export const SharedLinksPanel = () => {
                                 variant="ghost"
                                 icon={<Reload/>}
                                 label={label(t, 'panel.reload')}
-                                isDisabled={links.loading}
-                                onClick={() => links.refetch()}
+                                isLoading={reloading}
+                                isDisabled={reloading || links.loading || onSite.loading}
+                                data-cs-role="reload"
+                                onClick={onReload}
                             />,
                             <Button
                                 key="csv"
