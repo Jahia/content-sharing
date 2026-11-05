@@ -1,6 +1,6 @@
 {
     "name": "@jahia/SharedURLGenerator",
-    "version": "2.5.0",
+    "version": "2.5.1-SNAPSHOT",
     "scripts": {
         "build": "yarn lint:fix && yarn webpack",
         "lint": "eslint --ext js,jsx,json .",
