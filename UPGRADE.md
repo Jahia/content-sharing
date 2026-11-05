@@ -7,16 +7,29 @@ mixin's key and expiry date on the node: saving it marked the node as modified, 
 copied the key to live. From 2.5.0 it is a `cshnt:reviewLink` node in a `cshareReviewLinks`
 container under the content, never published, made with **Share for external review**.
 
-Nothing has to be migrated. Links made the old way:
+Links made the old way keep working after the upgrade: the endpoint still reads them, and the
+Shared links panel lists and revokes them. Content Editor no longer shows their field.
 
-- keep working until they expire, and are listed in **Site Settings > Shared links**, where
-  **Revoke** removes them as before;
-- are no longer shown in Content Editor, where the review field is hidden; the mixin itself stays
-  on the nodes that carry it until they are revoked.
+To move them to the 2.5 storage, run [`migration/3-review-links-2.5.groovy`](migration/3-review-links-2.5.groovy)
+after deploying 2.5.0, from **Administration > Server > Tools > Groovy console** or the provisioning
+API (`executeScript`):
 
-To move one to the new storage, revoke it in the panel and create it again from the Preview menu.
-A copy of the old key may remain in live from an earlier publication: it opens nothing, and goes
-away the next time the node is published.
+1. Run it as shipped (`DRY_RUN = true`). It prints one line per link: `move`, `drop` or `keep`.
+2. Set `DRY_RUN = false` and run it again.
+3. Run it once more: it must report `0 node(s)`.
+
+What it does, in the authoring workspace only:
+
+- **move**: a link with a future expiry date becomes a 2.5 link with the **same key and expiry
+  date**, so an address already handed to a reviewer keeps working;
+- **drop**: a key with no expiry date, or an expired one, is cleared: it opened nothing;
+- **keep**: where a 2.5 link already exists in that language, it stays and the old key is cleared;
+- the old properties and the `cshmix:reviewUrl` mixin are removed from the node.
+
+Each migrated node then shows as **modified**. The script publishes nothing, because publishing
+would also send the node's other pending changes. A copy of the old key may remain in live from an
+earlier publication: it opens nothing (review keys are only read from authoring) and goes away the
+next time the node is published.
 
 ## 2.0.0: from 1.x
 

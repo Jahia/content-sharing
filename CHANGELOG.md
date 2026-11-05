@@ -6,6 +6,11 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- `migration/3-review-links-2.5.groovy` moves review links made before 2.5.0 to the 2.5 storage,
+  keeping their keys, so their addresses keep working. See `UPGRADE.md`.
+
 ## 2.5.0 - 2026-11-05
 
 ### Added
