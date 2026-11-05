@@ -41,12 +41,45 @@
       "authoring": "Edición",
       "live": "En vivo",
       "notYetLive": "Aún no publicado",
-      "pendingRevocation": "Revocado, todavía en vivo"
+      "pendingRevocation": "Revocado, todavía en vivo",
+      "copy": "Copia, no abre nada"
     },
     "reload": "Recargar",
     "pagination": {
       "itemsPerPage": "Enlaces por página",
       "of": "de"
     }
+  },
+  "review": {
+    "action": "Compartir para revisión externa",
+    "title": "Compartir para revisión externa",
+    "intro": "Quien tenga este enlace ve «{{name}}» tal como está ahora, cambios no publicados incluidos, sin cuenta, hasta que el enlace caduque.",
+    "everythingPage": "La persona que revisa ve todos los cambios no publicados de esta página, no solo los suyos. Sus enlaces llevan a páginas que quizá no pueda abrir.",
+    "everything": "La persona que revisa ve todos los cambios no publicados de este contenido, no solo los suyos.",
+    "language": "Enlace para la versión en {{language}}",
+    "validFor": "Válido durante",
+    "newExpiry": "Nueva caducidad",
+    "duration": {
+      "1": "1 día",
+      "3": "3 días",
+      "7": "1 semana",
+      "14": "2 semanas",
+      "30": "30 días"
+    },
+    "create": "Crear enlace",
+    "setExpiry": "Cambiar caducidad",
+    "active": "Activo",
+    "expired": "Caducado",
+    "worksUntil": "Funciona hasta el {{date}}",
+    "expiredOn": "Caducó el {{date}}",
+    "copy": "Copiar enlace",
+    "copied": "Copiado",
+    "open": "Abrir como revisor",
+    "revoke": "Revocar",
+    "confirmRevoke": "Confirmar",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "error": "No se pudo leer este contenido.",
+    "failed": "No se pudo guardar el enlace. Puede que no tenga permiso para compartir este contenido."
   }
 }

@@ -1,5 +1,6 @@
 {
   "name": "cshmix:reviewUrl",
+  "hide": true,
   "fields": [
     {
       "name": "cshare:reviewUrl",

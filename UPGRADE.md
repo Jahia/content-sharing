@@ -1,4 +1,24 @@
-# Upgrading content-sharing 1.x to 2.x
+# Upgrading content-sharing
+
+## 2.5.0: review links
+
+Review links move off the node they open. Until 2.4.x a review link was the `cshmix:reviewUrl`
+mixin's key and expiry date on the node: saving it marked the node as modified, and publishing it
+copied the key to live. From 2.5.0 it is a `cshnt:reviewLink` node in a `cshareReviewLinks`
+container under the content, never published, made with **Share for external review**.
+
+Nothing has to be migrated. Links made the old way:
+
+- keep working until they expire, and are listed in **Site Settings > Shared links**, where
+  **Revoke** removes them as before;
+- are no longer shown in Content Editor, where the review field is hidden; the mixin itself stays
+  on the nodes that carry it until they are revoked.
+
+To move one to the new storage, revoke it in the panel and create it again from the Preview menu.
+A copy of the old key may remain in live from an earlier publication: it opens nothing, and goes
+away the next time the node is published.
+
+## 2.0.0: from 1.x
 
 2.0.0 changes the module's CND namespace. This is a **breaking change**: it renames the mixin and
 both properties.
@@ -11,7 +31,7 @@ both properties.
 | key property | `se:sharedUrl` | `cshare:sharedUrl` |
 | expiry property | `se:sharedUrlExpiry` | `cshare:sharedUrlExpiry` |
 
-## Why
+### Why
 
 `se` is two characters long and generic, and other modules in the `org.jahia.se.modules` family
 claim it for a different URI. Jackrabbit will not rebind a prefix:
@@ -37,7 +57,7 @@ Where that happens the whole CND is rejected, and the consequences are quiet:
 - **Every module deployed after it fails to register its own node types too**, until this one is
   removed.
 
-## Which path applies to you
+### Which path applies to you
 
 **A. The module never worked here** — you have the namespace error in `jahia.log`, or the
 `remoteEntry.v0.js` 404 in jContent. Then no content carries the mixin, because it was never
@@ -52,7 +72,7 @@ grep -E "content-sharing" jahia.log | grep -E "Error parsing definitions|remappi
 **B. The module worked here** and contributors have generated sharing URLs. Then you have content
 under the old names and must migrate it. Read the rest of this page.
 
-## Migrating existing keys (path B only)
+### Migrating existing keys (path B only)
 
 Two phases, because the old names have to be read while the old types are still registered and the
 new names written once the new ones are.
@@ -69,7 +89,7 @@ Both scripts run from *Administration > Server > Tools > Groovy console*, or thr
 provisioning API. Phase 1 is read-only. Phase 2 is idempotent, so it is safe to re-run after
 fixing a failure.
 
-### Two things to check on a restored copy first
+#### Two things to check on a restored copy first
 
 Do not run path B against production without rehearsing it on a restore.
 
@@ -82,7 +102,7 @@ Do not run path B against production without rehearsing it on a restore.
   `Registering ... into JCR providers`, so it reports no error and still registers nothing. A
   restart is the reliable way to get the new definitions read.
 
-## After upgrading
+### After upgrading
 
 Sharing URLs keep the same shape, but `t` is the node type of the shared content and any
 `semix:`-derived value in a stored or bookmarked URL is stale. Keys themselves are unchanged, so

@@ -1,0 +1,8 @@
+{
+  "ink": "#22437d",
+  "out": "src/main/resources/icons",
+  "icons": {
+    "cshnt:reviewLink": "link",
+    "cshnt:reviewLinks": "folder-lock"
+  }
+}

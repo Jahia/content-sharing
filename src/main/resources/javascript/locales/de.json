@@ -41,12 +41,45 @@
       "authoring": "Bearbeitung",
       "live": "Live",
       "notYetLive": "Noch nicht veröffentlicht",
-      "pendingRevocation": "Widerrufen, noch live"
+      "pendingRevocation": "Widerrufen, noch live",
+      "copy": "Kopie, öffnet nichts"
     },
     "reload": "Neu laden",
     "pagination": {
       "itemsPerPage": "Links pro Seite",
       "of": "von"
     }
+  },
+  "review": {
+    "action": "Für externe Prüfung teilen",
+    "title": "Für externe Prüfung teilen",
+    "intro": "Wer diesen Link hat, sieht „{{name}}“ im jetzigen Stand, unveröffentlichte Änderungen eingeschlossen, ohne Konto, bis der Link abläuft.",
+    "everythingPage": "Die prüfende Person sieht alle unveröffentlichten Änderungen dieser Seite, nicht nur Ihre. Links darauf führen zu Seiten, die sie vielleicht nicht öffnen kann.",
+    "everything": "Die prüfende Person sieht alle unveröffentlichten Änderungen dieses Inhalts, nicht nur Ihre.",
+    "language": "Link für die Sprachversion {{language}}",
+    "validFor": "Gültig für",
+    "newExpiry": "Neuer Ablauf",
+    "duration": {
+      "1": "1 Tag",
+      "3": "3 Tage",
+      "7": "1 Woche",
+      "14": "2 Wochen",
+      "30": "30 Tage"
+    },
+    "create": "Link erstellen",
+    "setExpiry": "Ablauf ändern",
+    "active": "Aktiv",
+    "expired": "Abgelaufen",
+    "worksUntil": "Gültig bis {{date}}",
+    "expiredOn": "Abgelaufen am {{date}}",
+    "copy": "Link kopieren",
+    "copied": "Kopiert",
+    "open": "Als Prüfer öffnen",
+    "revoke": "Widerrufen",
+    "confirmRevoke": "Bestätigen",
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "error": "Dieser Inhalt konnte nicht gelesen werden.",
+    "failed": "Der Link konnte nicht gespeichert werden. Möglicherweise dürfen Sie diesen Inhalt nicht teilen."
   }
 }

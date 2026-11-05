@@ -31,6 +31,9 @@ export const SITE_CONTEXT = gql`
  * does not work: on Jahia 8.2.3.2 / jContent 3.8.1 that child list comes back empty through
  * GraphQL, with no error, so every link went unreported (molex, 2026-11-04).
  *
+ * Review links made since 2.5.0 are nodes of their own (`cshnt:reviewLink`) under the content they
+ * open, read in one list; the language is the link's name and the content is its grandparent.
+ *
  * Both kinds are read from the authoring workspace, which holds every node whether published or
  * not. The published kind is read from the live workspace as well, because that is the workspace
  * its links are served from: a key cleared in authoring but still live is still a working link,
@@ -67,6 +70,24 @@ export const linksDocumentText = languages => {
             authoring: jcr(workspace: EDIT) {
                 ${byType('shared', 'cshmix:sharedUrl')}
                 ${byType('review', 'cshmix:reviewUrl')}
+                reviewLinks: nodesByCriteria(criteria: {
+                    nodeType: "cshnt:reviewLink", paths: [$sitePath], pathType: ANCESTOR
+                }) {
+                    nodes {
+                        uuid
+                        path
+                        name
+                        key: property(name: "cshare:key") { value }
+                        expiry: property(name: "cshare:expiry") { value }
+                        owner: property(name: "cshare:owner") { value }
+                        parent { parent {
+                            uuid
+                            path
+                            displayName(language: $displayLanguage)
+                            primaryNodeType { name }
+                        } }
+                    }
+                }
             }
             live: jcr(workspace: LIVE) {
                 ${byType('shared', 'cshmix:sharedUrl')}
@@ -92,6 +113,16 @@ export const REVOKE = gql`
                 mutateProperty(name: $property) { delete(language: $language) }
             }
         }
+    }
+`;
+
+/**
+ * Revokes a review link made since 2.5.0 by deleting it. Its container stays: deleting the
+ * container would mark the content as modified.
+ */
+export const DELETE_LINK = gql`
+    mutation ContentSharingDeleteLink($path: String!) {
+        jcr { deleteNode(pathOrId: $path) }
     }
 `;
 

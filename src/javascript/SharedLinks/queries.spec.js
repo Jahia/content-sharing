@@ -29,7 +29,8 @@ describe('the links document', () => {
     it('names an explicit language on every i18n property it reads', () => {
         // Without it the server answers null: the value lives on the translation node, and the
         // session the query runs in carries no locale.
-        const reads = text(['en', 'fr']).match(/property\(name: "cshare:[^)]*\)/g) || [];
+        // The review link nodes' own properties are not translated, so they are left out here.
+        const reads = text(['en', 'fr']).match(/property\(name: "cshare:(sharedUrl|reviewUrl)[^)]*\)/g) || [];
         // 4 keys x 2 languages x the 3 criteria blocks the document carries.
         expect(reads.length).toBe(24);
         reads.forEach(read => expect(read).toMatch(/language: "(en|fr)"/));
