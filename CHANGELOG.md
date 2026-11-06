@@ -6,6 +6,13 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- **Reload in the Shared links panel now reads everything again.** It re-read the links only: a
+  language added to the site, or the module switched off, showed after reopening the panel. It now
+  asks the server for the site's languages and settings, then for every link, never from a cache,
+  and the button shows that it is busy while the table stays on screen.
+
 ### Added
 
 - `migration/3-review-links-2.5.groovy` moves review links made before 2.5.0 to the 2.5 storage,
