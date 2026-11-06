@@ -6,6 +6,12 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+
+- Dependencies updated: Vitest 4 and copy-webpack-plugin 14 for the build and the tests, and
+  react-i18next declared as any 11.x release, the version jContent provides. The module no longer
+  imports Apache Commons Lang; nothing changes for editors or reviewers.
+
 ## 2.5.1 - 2026-11-06
 
 ### Fixed

@@ -1,6 +1,5 @@
 package org.jahia.se.modules.contentSharing;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jahia.api.Constants;
 import org.jahia.bin.Render;
 import org.jahia.services.content.JCRCallback;
@@ -249,7 +248,7 @@ public class ContentSharingServlet extends HttpServlet {
         // Set before any branch below writes, so every answer this endpoint gives carries them.
         applySecretUrlHeaders(response);
 
-        if (StringUtils.isBlank(languageTag) && StringUtils.isNotBlank(legacyLanguageTag)) {
+        if (isBlank(languageTag) && !isBlank(legacyLanguageTag)) {
             // A URL still carrying `l` cannot be served in place: the render chain reads `l` off
             // the original request, which no wrapper of ours reaches. Bounce it to the canonical
             // form so the second request arrives without the reserved name.
@@ -602,7 +601,7 @@ public class ContentSharingServlet extends HttpServlet {
      * the per-node {@code isNodeType} check in the lookup stays authoritative.</p>
      */
     private String resolveShareableType(String type) {
-        if (StringUtils.isBlank(type)) {
+        if (isBlank(type)) {
             return null;
         }
         try {
@@ -640,16 +639,20 @@ public class ContentSharingServlet extends HttpServlet {
         return false;
     }
 
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
     private static boolean isValidKey(String key) {
         return key != null && KEY_PATTERN.matcher(key).matches();
     }
 
     private static Locale toLocale(String languageTag) {
-        if (StringUtils.isBlank(languageTag) || !LANGUAGE_PATTERN.matcher(languageTag).matches()) {
+        if (isBlank(languageTag) || !LANGUAGE_PATTERN.matcher(languageTag).matches()) {
             return Locale.ENGLISH;
         }
         Locale locale = Locale.forLanguageTag(languageTag);
-        return StringUtils.isBlank(locale.getLanguage()) ? Locale.ENGLISH : locale;
+        return isBlank(locale.getLanguage()) ? Locale.ENGLISH : locale;
     }
 
     /**
