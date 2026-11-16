@@ -6,8 +6,15 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- The review dialog names the language in full when jContent runs in a regional language
+  (Brazilian Portuguese, Chinese): it showed the language code.
+
 ### Changed
 
+- The module manager and the Store describe the module (they showed a placeholder text), and the
+  repository carries its MIT license.
 - Dependencies updated: Vitest 4 and copy-webpack-plugin 14 for the build and the tests, and
   react-i18next declared as any 11.x release, the version jContent provides. The module no longer
   imports Apache Commons Lang; nothing changes for editors or reviewers.

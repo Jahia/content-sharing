@@ -59,7 +59,13 @@
     <name>Content Sharing</name>
     <version>2.5.2-SNAPSHOT</version>
     <packaging>bundle</packaging>
-    <description>This is the custom module (Content Sharing) for running on a Jahia server.</description>
+    <description>Share a page, a content item or a file with people who have no Jahia account: review links to the draft and links to published private content, each with an expiry date, listed in a Shared links dashboard in jContent.</description>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/Jahia/content-sharing/blob/main/LICENSE</url>
+        </license>
+    </licenses>
 
     <scm>
         <connection>scm:git:git@github.com:Jahia/content-sharing.git</connection>

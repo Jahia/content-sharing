@@ -110,6 +110,8 @@ describe('languageName', () => {
         expect(languageName('fr', 'en')).toBe('French');
         expect(languageName('en', 'fr')).toBe('anglais');
         expect(languageName('pt_BR', 'en')).toBe('Brazilian Portuguese');
+        // A Jahia interface locale, written with an underscore
+        expect(languageName('fr', 'pt_BR')).toBe('francês');
     });
 
     it('falls back to the code', () => {

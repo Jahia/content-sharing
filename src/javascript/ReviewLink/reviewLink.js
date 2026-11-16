@@ -15,10 +15,13 @@ const DAY = 24 * 60 * 60 * 1000;
 /** The expiry date `days` from `now`, as the repository stores dates. */
 export const expiryAfter = (days, now = new Date()) => new Date(now.getTime() + (days * DAY)).toISOString();
 
+// Jahia writes a locale as zh_CN; Intl reads only the BCP 47 form, zh-CN.
+const bcp47 = code => code.replaceAll('_', '-');
+
 /** `fr` as "French" in the interface's language, or the code itself where the browser cannot say. */
 export const languageName = (language, uiLanguage) => {
     try {
-        return new Intl.DisplayNames([uiLanguage || 'en'], {type: 'language'}).of(language.replace('_', '-')) || language;
+        return new Intl.DisplayNames([bcp47(uiLanguage || 'en')], {type: 'language'}).of(bcp47(language)) || language;
     } catch (_) {
         return language;
     }

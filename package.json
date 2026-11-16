@@ -19,7 +19,7 @@
     "main": "index.js",
     "repository": "git@github.com:Jahia/content-sharing.git",
     "author": "Herve Duchesne <hduchesne@jahia.com>",
-    "license": "SEE LICENSE IN LICENSE.md FILE",
+    "license": "MIT",
     "jahia": {
         "remotes": {
             "jahia": "javascript/apps/remoteEntry.js"
