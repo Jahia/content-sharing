@@ -120,8 +120,9 @@ field even when a build skips the yarn step. The editor field uses Moonstone and
 jContent provides; the module declares no Material UI dependency.
 
 `yarn test` runs the front-end unit tests (the panel's reporting, the exports, and that the
-four shipped languages stay in step with each other). The pull-request workflow runs them
-alongside the linter.
+four shipped languages stay in step with each other). `yarn lint` runs ESLint with the rules the
+SonarQube check of pull requests fails on (`eslint.config.mjs`, each rule beside its Sonar key).
+The pull-request workflow runs both.
 
 A package for a release is built by the workflow, never locally: `jahia-maven-plugin` writes the
 build machine's own path into the manifest of a local build, and the workflow both sets

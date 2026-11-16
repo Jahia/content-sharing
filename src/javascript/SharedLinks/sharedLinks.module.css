@@ -44,9 +44,12 @@
     overflow-x: auto;
 }
 
-/* The fixed columns (744 px, see the panel) plus room for the content to be read. */
+/*
+ * The fixed columns (488 px, see the panel) plus room for the content to be read. Below it the
+ * table scrolls; above it, which a 1280 px window with the administration menu open is, it fits.
+ */
 .tableBox table {
-    min-width: 960px;
+    min-width: 720px;
 }
 
 /*
@@ -95,6 +98,14 @@
 
 .stack {
     display: flex;
+    gap: var(--moon-spacing-small);
+}
+
+/* The kind chip and the language, on one line under the content's name. */
+.facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: var(--moon-spacing-small);
 }
 

@@ -19,6 +19,11 @@ describe('shareUrl', () => {
             .toBe('https://example.org/jahia/modules/share?c=AbC123&t=jnt%3Apage&lang=en');
     });
 
+    it('drops every slash the base ends with', () => {
+        expect(shareUrl({...link, base: 'https://example.org/jahia///'}))
+            .toBe('https://example.org/jahia/modules/share?c=AbC123&t=jnt%3Apage&lang=en');
+    });
+
     it('never writes the reserved parameter l', () => {
         expect(new URL(shareUrl({...link, base: 'https://example.org'})).searchParams.has('l')).toBe(false);
     });

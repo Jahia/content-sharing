@@ -15,7 +15,7 @@ const reported = row => ({...row, state: state(row)});
 export const defuse = cell => (/^[=+\-@\t\r]/.test(cell) ? '\'' + cell : cell);
 
 /** Every cell quoted, inner quotes doubled: a path may contain a comma or a quote. */
-const quote = cell => '"' + defuse(String(cell)).replace(/"/g, '""') + '"';
+const quote = cell => '"' + defuse(String(cell)).replaceAll('"', '""') + '"';
 
 /**
  * One row per link. UTF-8 with a byte order mark and CRLF line endings, which is what Excel reads

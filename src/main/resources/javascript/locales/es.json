@@ -31,8 +31,6 @@
     },
     "column": {
       "content": "Contenido",
-      "kind": "Tipo",
-      "language": "Idioma",
       "expiry": "Caducidad",
       "state": "Estado",
       "action": "Acción"
