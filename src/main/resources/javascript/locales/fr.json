@@ -31,8 +31,6 @@
     },
     "column": {
       "content": "Contenu",
-      "kind": "Type",
-      "language": "Langue",
       "expiry": "Expiration",
       "state": "État",
       "action": "Action"

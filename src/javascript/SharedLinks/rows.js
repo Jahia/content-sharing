@@ -1,5 +1,5 @@
 /** A language code as a GraphQL alias prefix: `pt-BR` is a valid code and an invalid alias. */
-export const aliasFor = language => 'l_' + language.replace(/[^A-Za-z0-9]/g, '_');
+export const aliasFor = language => 'l_' + language.replaceAll(/[^A-Za-z0-9]/g, '_');
 
 export const PUBLISHED = 'published';
 export const REVIEW = 'review';

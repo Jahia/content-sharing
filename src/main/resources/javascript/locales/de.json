@@ -31,8 +31,6 @@
     },
     "column": {
       "content": "Inhalt",
-      "kind": "Art",
-      "language": "Sprache",
       "expiry": "Ablauf",
       "state": "Status",
       "action": "Aktion"

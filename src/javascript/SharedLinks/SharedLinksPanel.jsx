@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import PropTypes from 'prop-types';
 import {useTranslation} from 'react-i18next';
 import {useSelector} from 'react-redux';
 import {useMutation, useQuery} from '@apollo/client';
@@ -26,13 +27,15 @@ const label = (t, key, options) => t(MODULE + ':' + key, options);
  * are kept short for it: a date or an explanation goes under its chip, where it can wrap. The
  * content column, whose text wraps, takes what is left; under the table's minimum width the table
  * scrolls rather than cutting a label.
+ *
+ * The kind and the language sit under the content's name rather than in columns of their own: at
+ * 1280 px with the administration menu open the table has about 830 px, and seven columns left the
+ * content 84 px, so the table scrolled and the actions fell off the right edge.
  */
-const KIND_WIDTH = 160;
-const LANGUAGE_WIDTH = 96;
 const EXPIRY_WIDTH = 136;
 const STATE_WIDTH = 192;
 const ACTION_WIDTH = 160;
-const CONTENT_WIDTH = `calc(100% - ${KIND_WIDTH + LANGUAGE_WIDTH + EXPIRY_WIDTH + STATE_WIDTH + ACTION_WIDTH}px)`;
+const CONTENT_WIDTH = `calc(100% - ${EXPIRY_WIDTH + STATE_WIDTH + ACTION_WIDTH}px)`;
 
 /** A path that wraps after a slash, never inside a node name. */
 const BreakablePath = ({path}) => path.split('/').map((part, index) => (
@@ -67,6 +70,14 @@ const ExpiryCell = ({row, t}) => {
     ) : <Typography variant="caption">{on}</Typography>;
 };
 
+/** The cells read a row of `toRows`; an expiry date is an ISO string. */
+const cellPropTypes = {
+    row: PropTypes.shape({expiry: PropTypes.string}).isRequired,
+    t: PropTypes.func.isRequired
+};
+
+ExpiryCell.propTypes = cellPropTypes;
+
 /**
  * Which workspace serves the link. The one that matters is `pendingRevocation`: the key is gone
  * from authoring, so nothing in jContent shows it any more, and live still serves it.
@@ -92,6 +103,8 @@ const StateCell = ({row, t}) => {
         </Typography>
     );
 };
+
+StateCell.propTypes = cellPropTypes;
 
 export const SharedLinksPanel = () => {
     const {t} = useTranslation(MODULE);
@@ -252,7 +265,7 @@ export const SharedLinksPanel = () => {
     const enabled = Boolean(installed && installed.values && installed.values.indexOf(MODULE) !== -1);
 
     // A link sub-row fills the content cell only; CSS spreads that cell over the whole row.
-    const parentOnly = render => props => (props.data.isLink ? null : render(props));
+    const parentOnly = render => cell => (cell.data.isLink ? null : render(cell));
 
     const columns = useMemo(() => [
         {
@@ -275,23 +288,15 @@ export const SharedLinksPanel = () => {
             ) : (
                 <span className={styles.pathCell}>
                     <Typography isNowrap={false}>{data.displayName}</Typography>
+                    <span className={styles.facts}>
+                        <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>
+                        <Typography variant="caption">{data.language}</Typography>
+                    </span>
                     <Typography variant="caption" isNowrap={false} className={styles.path}>
                         <BreakablePath path={data.path}/>
                     </Typography>
                 </span>
             ))
-        },
-        {
-            key: 'kind',
-            label: label(t, 'panel.column.kind'),
-            width: KIND_WIDTH + 'px',
-            render: parentOnly(({data}) => <Chip label={label(t, 'panel.kind.' + data.kind)} color="default"/>)
-        },
-        {
-            key: 'language',
-            label: label(t, 'panel.column.language'),
-            width: LANGUAGE_WIDTH + 'px',
-            render: parentOnly(({data}) => <Typography variant="caption">{data.language}</Typography>)
         },
         {
             key: 'expiry',

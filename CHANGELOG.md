@@ -6,9 +6,18 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- Site Settings > Shared links fits a 1280 px window with the administration menu open: the table
+  scrolled sideways and its Revoke and Publish buttons were off the right edge. Each link's kind
+  and language now sit under the content's name instead of in two columns of their own.
+
 ### Changed
 
 - The module description names where the Shared links list is: Site Settings, not jContent.
+- `yarn lint` runs ESLint 9 with the rules the SonarQube check of pull requests fails on
+  (`eslint.config.mjs`), in place of the old ESLint 8 configuration. The few places it reported
+  are rewritten with the same behaviour.
 
 ## 2.5.2 - 2026-11-16
 

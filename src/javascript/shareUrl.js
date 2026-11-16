@@ -8,6 +8,16 @@ export const defaultOrigin = () => {
     return location ? location.origin + contextPath : '';
 };
 
+/** `base` without the slashes it ends with, read from the end: no pattern to backtrack on. */
+const withoutTrailingSlashes = base => {
+    let end = base.length;
+    while (end > 0 && base[end - 1] === '/') {
+        end--;
+    }
+
+    return base.slice(0, end);
+};
+
 /**
  * The address a visitor opens: the endpoint, the key, the node type and the language.
  *
@@ -21,7 +31,7 @@ export const shareUrl = ({key, nodeType, language, base}) => {
         return undefined;
     }
 
-    const url = new URL(base.replace(/\/+$/, '') + '/modules/share');
+    const url = new URL(withoutTrailingSlashes(base) + '/modules/share');
     url.searchParams.append('c', key);
     url.searchParams.append('t', nodeType);
     // 'lang', not 'l': Jahia's URL resolution reads 'l' as a version label.

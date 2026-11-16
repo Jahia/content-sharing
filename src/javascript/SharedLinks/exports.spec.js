@@ -34,7 +34,7 @@ describe('defuse', () => {
 describe('toCsv', () => {
     it('opens with a byte order mark and ends every line with CRLF', () => {
         const csv = toCsv([row()]);
-        expect(csv.charCodeAt(0)).toBe(0xFEFF);
+        expect(csv.codePointAt(0)).toBe(0xFEFF);
         expect(csv.split('\r\n')).toHaveLength(3);
         expect(csv.endsWith('\r\n')).toBe(true);
     });
