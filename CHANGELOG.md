@@ -4,6 +4,12 @@ All notable changes to this module are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the module follows
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- The module description names where the Shared links list is: Site Settings, not jContent.
+
 ## 2.5.2 - 2026-11-16
 
 ### Fixed
