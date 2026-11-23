@@ -6,6 +6,13 @@ All notable changes to this module are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- jContent's right-click and row menus stayed on grey placeholders on every content item where
+  *Share for external review* is not offered, such as a content folder: the action hid itself in a
+  way jContent's menus wait for forever. It now hides like jContent's own actions, and the menus
+  open at once.
+
 ## 2.5.3 - 2026-11-16
 
 ### Fixed

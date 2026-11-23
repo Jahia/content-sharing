@@ -20,17 +20,19 @@ export const ReviewLinkAction = ({path, render: Render, loading: Loading, ...oth
     const language = useSelector(state => state.language);
     const access = useQuery(REVIEW_LINK_ACCESS, {variables: {path}, skip: !path});
 
-    if (access.loading) {
-        return (Loading && <Loading {...others}/>) || false;
+    if (access.loading && Loading) {
+        return <Loading {...others}/>;
     }
 
-    if (access.error || !mayShare(access.data && access.data.jcr && access.data.jcr.nodeByPath)) {
-        return false;
-    }
+    // Hidden through the render prop, never by returning null or false: jContent's menus show their
+    // items once none is loading, and an item that rendered Loading then nothing stays loading for
+    // good, which left every right-click menu on a content folder as grey placeholders (2.5.3).
+    const visible = !access.loading && !access.error && mayShare(access.data?.jcr?.nodeByPath);
 
     return (
         <Render
             {...others}
+            isVisible={visible}
             onClick={() => componentRenderer.render(DIALOG, ReviewLinkDialog, {
                 path,
                 language,
